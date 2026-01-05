@@ -1,0 +1,8 @@
+io.aperture.noop.aperture-no-op-pngs-0 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/generated/res/pngs/release
+io.aperture.noop.aperture-no-op-resValues-1 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/generated/res/resValues/release
+io.aperture.noop.aperture-no-op-updated_navigation_xml-2 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/generated/updated_navigation_xml/release
+io.aperture.noop.aperture-no-op-mergeReleaseResources-3 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+io.aperture.noop.aperture-no-op-mergeReleaseResources-4 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+io.aperture.noop.aperture-no-op-release-5 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/build/intermediates/merged_res/release/mergeReleaseResources
+io.aperture.noop.aperture-no-op-main-6 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/src/main/res
+io.aperture.noop.aperture-no-op-release-7 /Users/rajivsingh/development/myApps/android/Aperture/aperture-no-op/src/release/res

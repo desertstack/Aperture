@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Aperture Sample App"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/server_url"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Server URL"
+        android:textSize="14sp"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Make HTTP requests to see them in Aperture:"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btn_get_request"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Make GET Request"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btn_post_request"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Make POST Request"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btn_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Make Request (404 Error)"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📱 Open the server URL in your browser\nto inspect network traffic"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:textColor="#666666" />
+
+</LinearLayout>

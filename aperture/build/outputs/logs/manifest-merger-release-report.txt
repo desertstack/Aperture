@@ -1,0 +1,48 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:2:1-24:12
+INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:2:1-24:12
+	package
+		INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:4:5-67
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:4:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:5:5-79
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:5:22-76
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:8:5-77
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:8:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_DATA_SYNC
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:11:5-87
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:11:22-84
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:14:5-77
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:14:22-74
+application
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:16:5-23:19
+service#io.aperture.service.ApertureService
+ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:18:9-22:56
+	android:enabled
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:20:13-35
+	android:exported
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:21:13-37
+	android:foregroundServiceType
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:22:13-53
+	android:name
+		ADDED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml:19:13-52
+uses-sdk
+INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml
+INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/rajivsingh/development/myApps/android/Aperture/aperture/src/main/AndroidManifest.xml

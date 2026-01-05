@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.13.2" type="incidents">
+
+    <incident
+        id="StaticFieldLeak"
+        severity="warning"
+        message="Do not place Android context classes in static fields (static reference to `Aperture` which has field `context` pointing to `Context`); this is a memory leak">
+        <location
+            file="${:aperture*debug*MAIN*sourceProvider*0*javaDir*2}/io/aperture/Aperture.kt"
+            line="16"
+            column="1"
+            startOffset="491"
+            endLine="270"
+            endColumn="2"
+            endOffset="7942"/>
+    </incident>
+
+    <incident
+        id="StaticFieldLeak"
+        severity="warning"
+        message="Do not place Android context classes in static fields; this is a memory leak">
+        <location
+            file="${:aperture*debug*MAIN*sourceProvider*0*javaDir*2}/io/aperture/Aperture.kt"
+            line="22"
+            column="5"
+            startOffset="640"
+            endLine="22"
+            endColumn="41"
+            endOffset="676"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(serverUrl)"
+            replacement="serverUrl.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:aperture*debug*MAIN*sourceProvider*0*javaDir*2}/io/aperture/service/ApertureService.kt"
+                startOffset="4330"
+                endOffset="4350"/>
+        </fix-replace>
+        <location
+            file="${:aperture*debug*MAIN*sourceProvider*0*javaDir*2}/io/aperture/service/ApertureService.kt"
+            line="139"
+            column="60"
+            startOffset="4330"
+            endLine="139"
+            endColumn="80"
+            endOffset="4350"/>
+    </incident>
+
+</incidents>

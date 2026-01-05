@@ -1,0 +1,4 @@
+io.aperture
+drawable ic_aperture_notification
+drawable ic_clear
+drawable ic_stop
