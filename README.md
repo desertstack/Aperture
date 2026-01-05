@@ -27,11 +27,12 @@
 Add to your app's `build.gradle.kts`:
 
 ```kotlin
-dependencies {
-    // Use Aperture in debug builds only
-    debugImplementation("io.aperture:aperture:1.0.0")
-    releaseImplementation("io.aperture:aperture-no-op:1.0.0")
-}
+clone and add to settings.gradle.kts
+    project(":aperture").projectDir = file("<path>")
+
+in build.gradle.kts
+implementation(project(":mylibrary"))
+
 ```
 
 ### 2. Initialize in Application Class
@@ -72,6 +73,9 @@ Check your Logcat for the server URL:
 ```
 Aperture: Server started at: http://192.168.1.100:8080
 ```
+
+
+<img src="https://github.com/desertstack/Aperture/blob/main/web_ui.png" width=30% height=30%>
 
 Open this URL in any browser on your network to inspect traffic!
 
@@ -353,8 +357,6 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 🗺️ Roadmap
-
-See [PRD.md](prd.md) for the complete product roadmap and future features.
 
 ### v1.0 (Current)
 - ✅ HTTP/HTTPS traffic capture
