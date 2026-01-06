@@ -16,3 +16,5 @@ local.properties
 prd.md
 .claude/
 .idea/
+aperture/build
+aperture-no-op/build

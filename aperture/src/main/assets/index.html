@@ -12,26 +12,44 @@
         }
 
         :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f5f5f5;
-            --bg-tertiary: #e0e0e0;
-            --text-primary: #212121;
-            --text-secondary: #757575;
-            --border-color: #e0e0e0;
-            --accent-color: #2196F3;
-            --success-color: #4CAF50;
-            --error-color: #f44336;
-            --warning-color: #ff9800;
+            /* Light Mode - Minimal Professional */
+            --bg-primary: #FAFBFC;
+            --bg-surface: #FFFFFF;
+            --bg-hover: #F6F8FA;
+            --bg-selected: #EBF2FF;
+            --border-color: #E1E4E8;
+            --text-primary: #24292F;
+            --text-secondary: #57606A;
+            --text-tertiary: #6E7781;
+
+            /* Method Colors (Muted) */
+            --method-get: #0969DA;
+            --method-post: #1A7F37;
+            --method-put: #BC4C00;
+            --method-delete: #CF222E;
+            --method-patch: #8250DF;
+
+            /* Status Colors */
+            --status-2xx: #1A7F37;
+            --status-3xx: #0969DA;
+            --status-4xx: #BC4C00;
+            --status-5xx: #CF222E;
+
+            /* Special */
+            --mock-color: #8250DF;
+            --accent-color: #0969DA;
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-primary: #121212;
-                --bg-secondary: #1e1e1e;
-                --bg-tertiary: #2a2a2a;
-                --text-primary: #ffffff;
-                --text-secondary: #b0b0b0;
-                --border-color: #333333;
+                --bg-primary: #0D1117;
+                --bg-surface: #161B22;
+                --bg-hover: #1C2128;
+                --bg-selected: #1F2937;
+                --border-color: #30363D;
+                --text-primary: #C9D1D9;
+                --text-secondary: #8B949E;
+                --text-tertiary: #6E7681;
             }
         }
 
@@ -40,215 +58,360 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
 
+        /* Header */
         header {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-bottom: 2px solid var(--border-color);
-            margin-bottom: 20px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            max-width: 100%;
+            padding: 20px 24px 16px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+        }
+
+        .status-dot.connected {
+            background: var(--status-2xx);
+        }
+
+        .status-dot.error {
+            background: var(--status-5xx);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 24px;
+            padding: 0 24px 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Main Content - Two Pane Layout */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+
+        /* Left Pane */
+        .left-pane {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            background: var(--bg-surface);
         }
 
         .controls {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
         }
 
         .search-box, .filter-select {
-            padding: 10px;
+            padding: 8px 12px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 6px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus, .filter-select:focus {
+            border-color: var(--accent-color);
         }
 
         .search-box {
             flex: 1;
-            min-width: 200px;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-tertiary);
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 14px;
             border: none;
-            border-radius: 4px;
-            background: var(--accent-color);
-            color: white;
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             cursor: pointer;
-            font-size: 14px;
-            transition: opacity 0.2s;
+            font-size: 13px;
+            transition: background 0.2s;
+            border: 1px solid var(--border-color);
+            white-space: nowrap;
         }
 
         .btn:hover {
-            opacity: 0.9;
+            background: var(--bg-hover);
         }
 
         .btn-danger {
-            background: var(--error-color);
+            color: var(--status-5xx);
         }
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+        .btn-danger:hover {
+            background: #FEF2F2;
         }
 
-        .stat-card {
-            background: var(--bg-secondary);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
+        /* Transaction List */
         .transaction-list {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            overflow: hidden;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .transaction-item {
-            padding: 15px;
+            padding: 14px 16px;
             border-bottom: 1px solid var(--border-color);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.15s;
         }
 
         .transaction-item:hover {
-            background: var(--bg-tertiary);
+            background: var(--bg-hover);
+        }
+
+        .transaction-item.selected {
+            background: var(--bg-selected);
+            border-left: 3px solid var(--accent-color);
+            padding-left: 13px;
         }
 
         .transaction-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 5px;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
         }
 
-        .method-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
+        .method-indicator {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .method-GET { background: #2196F3; }
-        .method-POST { background: #4CAF50; }
-        .method-PUT { background: #ff9800; }
-        .method-DELETE { background: #f44336; }
-        .method-PATCH { background: #9C27B0; }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
         }
 
-        .status-2xx { background: #4CAF50; }
-        .status-3xx { background: #2196F3; }
-        .status-4xx { background: #ff9800; }
-        .status-5xx { background: #f44336; }
-        .status-error { background: #f44336; }
+        .dot.method-GET { background: var(--method-get); }
+        .dot.method-POST { background: var(--method-post); }
+        .dot.method-PUT { background: var(--method-put); }
+        .dot.method-DELETE { background: var(--method-delete); }
+        .dot.method-PATCH { background: var(--method-patch); }
+
+        .dot.status-2xx { background: var(--status-2xx); }
+        .dot.status-3xx { background: var(--status-3xx); }
+        .dot.status-4xx { background: var(--status-4xx); }
+        .dot.status-5xx { background: var(--status-5xx); }
+        .dot.status-error { background: var(--status-5xx); }
+
+        .status-code {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
         .transaction-url {
             flex: 1;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 13px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            color: var(--text-primary);
+        }
+
+        .mock-indicator {
+            color: var(--mock-color);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .transaction-meta {
             display: flex;
-            gap: 15px;
-            font-size: 12px;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding-left: 14px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Right Pane */
+        .right-pane {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            overflow-y: auto;
+        }
+
+        .detail-container {
+            padding: 24px;
+        }
+
+        .detail-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
             color: var(--text-secondary);
         }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            overflow-y: auto;
+        .detail-empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
         }
 
-        .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: var(--bg-primary);
-            border-radius: 8px;
-            width: 100%;
-            max-width: 1000px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            padding: 20px;
+        .detail-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .modal-body {
-            padding: 20px;
+        .detail-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+        }
+
+        .detail-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            align-items: center;
         }
 
         .detail-section {
-            margin-bottom: 20px;
+            margin-bottom: 28px;
         }
 
-        .detail-section h3 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: var(--accent-color);
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin-bottom: 12px;
         }
 
         .detail-grid {
             display: grid;
-            grid-template-columns: 150px 1fr;
-            gap: 10px;
-            font-size: 14px;
+            grid-template-columns: 140px 1fr;
+            gap: 10px 16px;
+            font-size: 13px;
         }
 
         .detail-label {
@@ -256,89 +419,106 @@
             font-weight: 500;
         }
 
+        .detail-value {
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
         .code-block {
-            background: var(--bg-secondary);
-            padding: 15px;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Menlo', monospace;
+            background: var(--bg-surface);
+            padding: 16px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
             font-size: 12px;
             overflow-x: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
+            border: 1px solid var(--border-color);
+            line-height: 1.6;
+            color: var(--text-primary);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .mock-badge {
-            background: #9C27B0;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .mock-controls {
-            margin-top: 20px;
-            padding: 15px;
-            background: var(--bg-secondary);
+        .mock-config {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
+            padding: 20px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
         .form-label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             font-weight: 500;
+            font-size: 13px;
+            color: var(--text-primary);
         }
 
         .form-input, .form-textarea {
             width: 100%;
-            padding: 8px;
+            padding: 8px 12px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 6px;
             background: var(--bg-primary);
             color: var(--text-primary);
             font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            border-color: var(--accent-color);
         }
 
         .form-textarea {
-            font-family: 'Monaco', 'Menlo', monospace;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
             font-size: 12px;
-            min-height: 100px;
+            min-height: 120px;
+            resize: vertical;
         }
 
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            background: var(--accent-color);
+        }
+
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: var(--bg-secondary);
-            padding: 15px 20px;
+            background: var(--bg-surface);
+            padding: 12px 20px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
             display: none;
             z-index: 2000;
+            font-size: 13px;
         }
 
         .toast.show {
@@ -349,69 +529,146 @@
         @keyframes slideIn {
             from {
                 transform: translateX(400px);
+                opacity: 0;
             }
             to {
                 transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes highlightNew {
+            0% {
+                background: var(--bg-selected);
+            }
+            100% {
+                background: transparent;
+            }
+        }
+
+        .transaction-item.new {
+            animation: highlightNew 1.5s ease-out;
+        }
+
+        /* Scrollbar Styling */
+        .transaction-list::-webkit-scrollbar,
+        .right-pane::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .transaction-list::-webkit-scrollbar-track,
+        .right-pane::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .transaction-list::-webkit-scrollbar-thumb,
+        .right-pane::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .transaction-list::-webkit-scrollbar-thumb:hover,
+        .right-pane::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .left-pane, .right-pane {
+                width: 100%;
+            }
+
+            .left-pane {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .stats-bar {
+                flex-wrap: wrap;
             }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>📡 Aperture Network Inspector</h1>
-            <p style="color: var(--text-secondary); font-size: 14px;">Real-time HTTP traffic monitoring and mocking</p>
-        </div>
-    </header>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="header-top">
+                    <div class="header-title">
+                        <h1>Aperture Network Inspector</h1>
+                        <div class="header-subtitle">Real-time HTTP traffic monitoring and mocking</div>
+                    </div>
+                    <div class="connection-status">
+                        <span class="status-dot" id="status-indicator"></span>
+                        <span id="status-text">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Mocked</div>
+                    <div class="stat-value" id="stat-mocked">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Failed</div>
+                    <div class="stat-value" id="stat-failed">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Duration</div>
+                    <div class="stat-value" id="stat-duration">0ms</div>
+                </div>
+            </div>
+        </header>
 
-    <div class="container">
-        <div class="stats" id="stats">
-            <div class="stat-card">
-                <div class="stat-label">Total Requests</div>
-                <div class="stat-value" id="stat-total">0</div>
+        <div class="main-content">
+            <!-- Left Pane -->
+            <div class="left-pane">
+                <div class="controls">
+                    <input type="text" class="search-box" id="search" placeholder="Search by URL...">
+                    <div class="controls-row">
+                        <select class="filter-select" id="method-filter">
+                            <option value="">All Methods</option>
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="PATCH">PATCH</option>
+                        </select>
+                        <select class="filter-select" id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="2xx">2xx Success</option>
+                            <option value="3xx">3xx Redirect</option>
+                            <option value="4xx">4xx Client Error</option>
+                            <option value="5xx">5xx Server Error</option>
+                        </select>
+                        <button class="btn" onclick="app.refresh()">🔄 Refresh</button>
+                        <button class="btn btn-danger" onclick="app.clearAll()">🗑️ Clear</button>
+                    </div>
+                </div>
+                <div class="transaction-list" id="transaction-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <p>No transactions yet</p>
+                        <p style="font-size: 12px; margin-top: 8px;">Make HTTP requests in your app to see them here</p>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Mocked</div>
-                <div class="stat-value" id="stat-mocked">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Failed</div>
-                <div class="stat-value" id="stat-failed">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Duration</div>
-                <div class="stat-value" id="stat-duration">0ms</div>
-            </div>
-        </div>
 
-        <div class="controls">
-            <input type="text" class="search-box" id="search" placeholder="Search by URL...">
-            <select class="filter-select" id="method-filter">
-                <option value="">All Methods</option>
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-                <option value="PATCH">PATCH</option>
-            </select>
-            <button class="btn" onclick="app.refresh()">🔄 Refresh</button>
-            <button class="btn btn-danger" onclick="app.clearAll()">🗑️ Clear All</button>
-        </div>
-
-        <div class="transaction-list" id="transaction-list">
-            <div class="empty-state">
-                <p>No transactions yet. Make some HTTP requests in your app!</p>
+            <!-- Right Pane -->
+            <div class="right-pane" id="right-pane">
+                <div class="detail-empty">
+                    <div class="detail-empty-icon">←</div>
+                    <p>Select a request to view details</p>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <div class="modal" id="detail-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Transaction Details</h2>
-                <button class="close-btn" onclick="app.closeModal()">&times;</button>
-            </div>
-            <div class="modal-body" id="detail-content"></div>
         </div>
     </div>
 
@@ -420,7 +677,7 @@
     <script>
         const app = {
             transactions: [],
-            selectedTransaction: null,
+            selectedTransactionId: null,
             eventSource: null,
 
             async init() {
@@ -437,6 +694,10 @@
 
                 document.getElementById('method-filter').addEventListener('change', (e) => {
                     this.loadTransactions({ method: e.target.value });
+                });
+
+                document.getElementById('status-filter').addEventListener('change', (e) => {
+                    this.loadTransactions({ status: e.target.value });
                 });
             },
 
@@ -456,7 +717,7 @@
             async loadTransactions(filters = {}) {
                 try {
                     const params = new URLSearchParams({
-                        limit: '50',
+                        limit: '100',
                         offset: '0',
                         ...filters
                     });
@@ -465,6 +726,16 @@
                     const data = await res.json();
                     this.transactions = data.transactions;
                     this.renderTransactions();
+
+                    // Reselect if there was a selection
+                    if (this.selectedTransactionId) {
+                        const stillExists = this.transactions.find(t => t.id === this.selectedTransactionId);
+                        if (stillExists) {
+                            this.renderDetails(stillExists);
+                        } else {
+                            this.clearSelection();
+                        }
+                    }
                 } catch (err) {
                     console.error('Failed to load transactions:', err);
                 }
@@ -474,7 +745,12 @@
                 const list = document.getElementById('transaction-list');
 
                 if (this.transactions.length === 0) {
-                    list.innerHTML = '<div class="empty-state"><p>No transactions found</p></div>';
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📡</div>
+                            <p>No transactions found</p>
+                        </div>
+                    `;
                     return;
                 }
 
@@ -483,105 +759,171 @@
 
             renderTransactionItem(t) {
                 const statusClass = t.error ? 'error' : t.responseCode ? Math.floor(t.responseCode / 100) + 'xx' : 'pending';
-                const statusText = t.error ? 'ERROR' : t.responseCode || '...';
-                const mockBadge = t.mockEnabled ? '<span class="mock-badge">MOCKED</span>' : '';
+                const statusText = t.error ? 'ERR' : t.responseCode || '...';
+                const mockIndicator = t.mockEnabled ? '<span class="mock-indicator">⚡ Mock</span>' : '';
+                const selectedClass = this.selectedTransactionId === t.id ? 'selected' : '';
 
                 return `
-                    <div class="transaction-item" onclick="app.showDetails(${t.id})">
+                    <div id="transaction-${t.id}" class="transaction-item ${selectedClass}" onclick="app.selectTransaction(${t.id})">
                         <div class="transaction-header">
-                            <span class="method-badge method-${t.method}">${t.method}</span>
-                            <span class="status-badge status-${statusClass}">${statusText}</span>
-                            ${mockBadge}
+                            <span class="method-indicator">
+                                <span class="dot method-${t.method}"></span>
+                                ${t.method}
+                            </span>
+                            <span class="status-code">
+                                <span class="dot status-${statusClass}"></span>
+                                ${statusText}
+                            </span>
                             <span class="transaction-url" title="${t.url}">${t.url}</span>
+                            ${mockIndicator}
                         </div>
                         <div class="transaction-meta">
-                            <span>⏱️ ${t.duration || 0}ms</span>
-                            <span>📦 ${this.formatBytes((t.requestPayloadSize || 0) + (t.responsePayloadSize || 0))}</span>
-                            <span>🕐 ${new Date(t.requestDate).toLocaleTimeString()}</span>
+                            <span>${t.duration || 0}ms</span>
+                            <span>${this.formatBytes((t.requestPayloadSize || 0) + (t.responsePayloadSize || 0))}</span>
+                            <span>${new Date(t.requestDate).toLocaleTimeString()}</span>
                         </div>
                     </div>
                 `;
             },
 
-            async showDetails(id) {
+            async selectTransaction(id) {
                 try {
                     const res = await fetch(`/api/transactions/${id}`);
-                    this.selectedTransaction = await res.json();
-                    this.renderDetails();
-                    document.getElementById('detail-modal').classList.add('active');
+                    const transaction = await res.json();
+                    this.selectedTransactionId = id;
+
+                    // Update selected state in list
+                    document.querySelectorAll('.transaction-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    const selectedItem = document.getElementById(`transaction-${id}`);
+                    if (selectedItem) {
+                        selectedItem.classList.add('selected');
+                    }
+
+                    this.renderDetails(transaction);
                 } catch (err) {
                     this.showToast('Failed to load transaction details');
                 }
             },
 
-            renderDetails() {
-                const t = this.selectedTransaction;
-                const content = document.getElementById('detail-content');
+            clearSelection() {
+                this.selectedTransactionId = null;
+                document.querySelectorAll('.transaction-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                document.getElementById('right-pane').innerHTML = `
+                    <div class="detail-empty">
+                        <div class="detail-empty-icon">←</div>
+                        <p>Select a request to view details</p>
+                    </div>
+                `;
+            },
 
-                content.innerHTML = `
-                    <div class="detail-section">
-                        <h3>Overview</h3>
-                        <div class="detail-grid">
-                            <span class="detail-label">Method:</span><span>${t.method}</span>
-                            <span class="detail-label">URL:</span><span>${t.url}</span>
-                            <span class="detail-label">Status:</span><span>${t.responseCode || 'Pending'} ${t.responseMessage || ''}</span>
-                            <span class="detail-label">Protocol:</span><span>${t.protocol || 'N/A'}</span>
-                            <span class="detail-label">Duration:</span><span>${t.duration || 0}ms</span>
+            renderDetails(t) {
+                const rightPane = document.getElementById('right-pane');
+
+                const statusClass = t.error ? 'error' : t.responseCode ? Math.floor(t.responseCode / 100) + 'xx' : 'pending';
+
+                rightPane.innerHTML = `
+                    <div class="detail-container">
+                        <div class="detail-header">
+                            <div class="detail-title">${t.method} ${t.url}</div>
+                            <div class="detail-meta">
+                                <span class="status-code">
+                                    <span class="dot status-${statusClass}"></span>
+                                    ${t.responseCode || 'Pending'} ${t.responseMessage || ''}
+                                </span>
+                                <span>${t.duration || 0}ms</span>
+                                <span>${this.formatBytes((t.requestPayloadSize || 0) + (t.responsePayloadSize || 0))}</span>
+                                ${t.mockEnabled ? '<span class="mock-indicator">⚡ Mock</span>' : ''}
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="detail-section">
-                        <h3>Request Headers</h3>
-                        <div class="code-block">${this.formatHeaders(t.requestHeaders)}</div>
-                    </div>
-
-                    ${t.requestBody ? `
-                    <div class="detail-section">
-                        <h3>Request Body</h3>
-                        <div class="code-block">${this.formatBody(t.requestBody, t.requestContentType)}</div>
-                    </div>
-                    ` : ''}
-
-                    ${t.responseHeaders ? `
-                    <div class="detail-section">
-                        <h3>Response Headers</h3>
-                        <div class="code-block">${this.formatHeaders(t.responseHeaders)}</div>
-                    </div>
-                    ` : ''}
-
-                    ${t.responseBody ? `
-                    <div class="detail-section">
-                        <h3>Response Body</h3>
-                        <div class="code-block">${this.formatBody(t.responseBody, t.responseContentType)}</div>
-                    </div>
-                    ` : ''}
-
-                    ${t.error ? `
-                    <div class="detail-section">
-                        <h3>Error</h3>
-                        <div class="code-block" style="color: var(--error-color);">${t.error}</div>
-                    </div>
-                    ` : ''}
-
-                    <div class="mock-controls">
-                        <h3>Mock Configuration</h3>
-                        <div class="form-group">
-                            <label class="form-label">
-                                <input type="checkbox" id="mock-enabled" ${t.mockEnabled ? 'checked' : ''}
-                                       onchange="app.toggleMock(${t.id}, this.checked)">
-                                Enable Mock Response
-                            </label>
+                        <div class="detail-section">
+                            <div class="section-title">General</div>
+                            <div class="section-divider"></div>
+                            <div class="detail-grid">
+                                <span class="detail-label">URL</span>
+                                <span class="detail-value">${t.url}</span>
+                                <span class="detail-label">Method</span>
+                                <span class="detail-value">${t.method}</span>
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value">${t.responseCode || 'Pending'} ${t.responseMessage || ''}</span>
+                                <span class="detail-label">Protocol</span>
+                                <span class="detail-value">${t.protocol || 'N/A'}</span>
+                                <span class="detail-label">Duration</span>
+                                <span class="detail-value">${t.duration || 0}ms</span>
+                                <span class="detail-label">Request Size</span>
+                                <span class="detail-value">${this.formatBytes(t.requestPayloadSize || 0)}</span>
+                                <span class="detail-label">Response Size</span>
+                                <span class="detail-value">${this.formatBytes(t.responsePayloadSize || 0)}</span>
+                                <span class="detail-label">Time</span>
+                                <span class="detail-value">${new Date(t.requestDate).toLocaleString()}</span>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Status Code:</label>
-                            <input type="number" class="form-input" id="mock-status"
-                                   value="${t.mockResponseCode || 200}" min="100" max="599">
+
+                        <div class="detail-section">
+                            <div class="section-title">Request Headers</div>
+                            <div class="section-divider"></div>
+                            <div class="code-block">${this.formatHeaders(t.requestHeaders)}</div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Response Body:</label>
-                            <textarea class="form-textarea" id="mock-body">${t.mockResponseBody || ''}</textarea>
+
+                        ${t.requestBody ? `
+                        <div class="detail-section">
+                            <div class="section-title">Request Body</div>
+                            <div class="section-divider"></div>
+                            <div class="code-block">${this.formatBody(t.requestBody, t.requestContentType)}</div>
                         </div>
-                        <button class="btn" onclick="app.saveMock(${t.id})">💾 Save Mock</button>
+                        ` : ''}
+
+                        ${t.responseHeaders ? `
+                        <div class="detail-section">
+                            <div class="section-title">Response Headers</div>
+                            <div class="section-divider"></div>
+                            <div class="code-block">${this.formatHeaders(t.responseHeaders)}</div>
+                        </div>
+                        ` : ''}
+
+                        ${t.responseBody ? `
+                        <div class="detail-section">
+                            <div class="section-title">Response Body</div>
+                            <div class="section-divider"></div>
+                            <div class="code-block">${this.formatBody(t.responseBody, t.responseContentType)}</div>
+                        </div>
+                        ` : ''}
+
+                        ${t.error ? `
+                        <div class="detail-section">
+                            <div class="section-title">Error</div>
+                            <div class="section-divider"></div>
+                            <div class="code-block" style="color: var(--status-5xx);">${t.error}</div>
+                        </div>
+                        ` : ''}
+
+                        <div class="detail-section">
+                            <div class="section-title">Mock Configuration</div>
+                            <div class="section-divider"></div>
+                            <div class="mock-config">
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="mock-enabled" ${t.mockEnabled ? 'checked' : ''}
+                                               onchange="app.toggleMock(${t.id}, this.checked)">
+                                        <span>Enable Mock Response</span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Status Code</label>
+                                    <input type="number" class="form-input" id="mock-status"
+                                           value="${t.mockResponseCode || 200}" min="100" max="599">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Response Body</label>
+                                    <textarea class="form-textarea" id="mock-body">${t.mockResponseBody || ''}</textarea>
+                                </div>
+                                <button class="btn btn-primary" onclick="app.saveMock(${t.id})">💾 Save Mock Configuration</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             },
@@ -617,6 +959,7 @@
                     });
                     this.showToast(enabled ? 'Mock enabled' : 'Mock disabled');
                     await this.loadTransactions();
+                    await this.selectTransaction(id);
                 } catch (err) {
                     this.showToast('Failed to update mock status');
                 }
@@ -637,10 +980,10 @@
                         })
                     });
 
-                    this.showToast('Mock saved successfully');
-                    await this.showDetails(id);
+                    this.showToast('Mock configuration saved');
+                    await this.selectTransaction(id);
                 } catch (err) {
-                    this.showToast('Failed to save mock');
+                    this.showToast('Failed to save mock configuration');
                 }
             },
 
@@ -650,6 +993,7 @@
                 try {
                     await fetch('/api/transactions', { method: 'DELETE' });
                     this.transactions = [];
+                    this.clearSelection();
                     this.renderTransactions();
                     await this.loadStats();
                     this.showToast('All transactions cleared');
@@ -658,32 +1002,122 @@
                 }
             },
 
-            closeModal() {
-                document.getElementById('detail-modal').classList.remove('active');
-            },
-
             setupEventSource() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+
+                this.updateConnectionStatus('connecting', 'Connecting...');
                 this.eventSource = new EventSource('/api/stream');
 
-                this.eventSource.addEventListener('new_transaction', () => {
-                    this.loadTransactions();
-                    this.loadStats();
+                this.eventSource.addEventListener('open', () => {
+                    console.log('SSE connection opened');
+                    this.updateConnectionStatus('connected', 'Live');
                 });
 
-                this.eventSource.addEventListener('updated_transaction', () => {
-                    this.loadTransactions();
+                this.eventSource.addEventListener('connected', (e) => {
+                    console.log('SSE connected:', e.data);
+                    this.updateConnectionStatus('connected', 'Live');
                 });
 
-                this.eventSource.addEventListener('deleted_transaction', () => {
-                    this.loadTransactions();
-                    this.loadStats();
+                this.eventSource.addEventListener('new_transaction', (e) => {
+                    console.log('New transaction:', e.data);
+                    try {
+                        const transaction = JSON.parse(e.data);
+                        this.addOrUpdateTransaction(transaction);
+                        this.loadStats();
+                    } catch (err) {
+                        console.error('Failed to parse new transaction:', err);
+                    }
+                });
+
+                this.eventSource.addEventListener('updated_transaction', (e) => {
+                    console.log('Updated transaction:', e.data);
+                    try {
+                        const transaction = JSON.parse(e.data);
+                        this.addOrUpdateTransaction(transaction);
+
+                        // If this is the selected transaction, update the details
+                        if (this.selectedTransactionId === transaction.id) {
+                            this.renderDetails(transaction);
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse updated transaction:', err);
+                    }
+                });
+
+                this.eventSource.addEventListener('deleted_transaction', (e) => {
+                    console.log('Deleted transaction:', e.data);
+                    try {
+                        const data = JSON.parse(e.data);
+                        this.removeTransaction(data.id);
+                        this.loadStats();
+                    } catch (err) {
+                        console.error('Failed to parse deleted transaction:', err);
+                    }
                 });
 
                 this.eventSource.addEventListener('all_deleted', () => {
+                    console.log('All transactions deleted');
                     this.transactions = [];
+                    this.clearSelection();
                     this.renderTransactions();
                     this.loadStats();
                 });
+
+                this.eventSource.addEventListener('error', (e) => {
+                    console.error('SSE error:', e);
+                    this.updateConnectionStatus('error', 'Disconnected');
+
+                    if (this.eventSource.readyState === EventSource.CLOSED) {
+                        console.log('SSE connection closed, reconnecting in 5s...');
+                        setTimeout(() => this.setupEventSource(), 5000);
+                    }
+                });
+            },
+
+            updateConnectionStatus(status, text) {
+                const indicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+
+                if (indicator && statusText) {
+                    statusText.textContent = text;
+                    indicator.className = 'status-dot ' + status;
+                }
+            },
+
+            addOrUpdateTransaction(transaction) {
+                const index = this.transactions.findIndex(t => t.id === transaction.id);
+                const isNew = index < 0;
+
+                if (index >= 0) {
+                    this.transactions[index] = transaction;
+                } else {
+                    this.transactions.unshift(transaction);
+
+                    if (this.transactions.length > 100) {
+                        this.transactions = this.transactions.slice(0, 100);
+                    }
+                }
+
+                this.renderTransactions();
+
+                if (isNew) {
+                    setTimeout(() => {
+                        const element = document.getElementById(`transaction-${transaction.id}`);
+                        if (element) {
+                            element.classList.add('new');
+                        }
+                    }, 50);
+                }
+            },
+
+            removeTransaction(id) {
+                this.transactions = this.transactions.filter(t => t.id !== id);
+                if (this.selectedTransactionId === id) {
+                    this.clearSelection();
+                }
+                this.renderTransactions();
             },
 
             refresh() {

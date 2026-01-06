@@ -41,6 +41,16 @@ object Aperture {
     }
 
     @JvmStatic
+    inline fun getLocalhostUrl(): String {
+        return ""
+    }
+
+    @JvmStatic
+    inline fun getAdbForwardCommand(): String {
+        return ""
+    }
+
+    @JvmStatic
     inline fun getAuthToken(): String? {
         return null
     }

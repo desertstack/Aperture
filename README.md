@@ -27,11 +27,11 @@
 Add to your app's `build.gradle.kts`:
 
 ```kotlin
-clone and add to settings.gradle.kts
+//clone and add to settings.gradle.kts
     project(":aperture").projectDir = file("<path>")
 
-in build.gradle.kts
-implementation(project(":mylibrary"))
+//in build.gradle.kts
+implementation(project(":aperture"))
 
 ```
 
