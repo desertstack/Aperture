@@ -83,13 +83,18 @@ class TransactionRepository(
 
     /**
      * Enable or disable mock for a transaction
+     * Updates ALL transactions with the same URL to ensure consistency
      */
     suspend fun setMockEnabled(id: Long, enabled: Boolean) {
-        dao.updateMockStatus(id, enabled)
+        // Get the transaction to extract URL
+        val transaction = dao.getById(id) ?: return
+        // Update all transactions with the same URL
+        dao.updateMockStatusByUrl(transaction.url, enabled)
     }
 
     /**
      * Update mock response data for a transaction
+     * Updates ALL transactions with the same URL to ensure consistency
      */
     suspend fun updateMockResponse(
         id: Long,
@@ -97,7 +102,21 @@ class TransactionRepository(
         headers: String?,
         body: String?
     ) {
-        dao.updateMockResponse(id, responseCode, headers, body)
+        // Get the transaction to extract URL
+        val transaction = dao.getById(id) ?: return
+        // Update all transactions with the same URL
+        dao.updateMockResponseByUrl(transaction.url, responseCode, headers, body)
+    }
+
+    /**
+     * Clear mock configuration for a transaction
+     * Clears mock data for ALL transactions with the same URL
+     */
+    suspend fun clearMock(id: Long) {
+        // Get the transaction to extract URL
+        val transaction = dao.getById(id) ?: return
+        // Clear mock for all transactions with the same URL
+        dao.clearMockByUrl(transaction.url)
     }
 
     /**

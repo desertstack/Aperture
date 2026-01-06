@@ -75,7 +75,7 @@ Aperture: Server started at: http://192.168.1.100:8080
 ```
 
 
-<img src="https://github.com/desertstack/Aperture/blob/main/web_ui.png" width=30% height=30%>
+<img src="https://github.com/desertstack/Aperture/blob/main/web_ui.png" width=50% height=50%>
 
 Open this URL in any browser on your network to inspect traffic!
 

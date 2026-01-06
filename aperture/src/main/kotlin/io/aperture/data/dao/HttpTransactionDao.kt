@@ -76,14 +76,24 @@ interface HttpTransactionDao {
     suspend fun updateMockStatus(id: Long, enabled: Boolean)
 
     /**
+     * Update mock status for ALL transactions with the same URL
+     * This ensures consistent behavior when toggling mocks on/off
+     */
+    @Query("UPDATE http_transactions SET mock_enabled = :enabled WHERE url = :url")
+    suspend fun updateMockStatusByUrl(url: String, enabled: Boolean)
+
+    /**
      * Update mock response data (FR-DB-010)
+     * Also automatically enables mock when saving response data
+     * Note: Does NOT set is_mocked=1 because this is just the template/configuration.
+     * Only the interceptor sets is_mocked=1 when actually returning a mocked response.
      */
     @Query("""
         UPDATE http_transactions
         SET mock_response_code = :responseCode,
             mock_response_headers = :headers,
             mock_response_body = :body,
-            is_mocked = 1
+            mock_enabled = 1
         WHERE id = :id
     """)
     suspend fun updateMockResponse(
@@ -92,6 +102,37 @@ interface HttpTransactionDao {
         headers: String?,
         body: String?
     )
+
+    /**
+     * Update mock response data for ALL transactions with the same URL
+     */
+    @Query("""
+        UPDATE http_transactions
+        SET mock_response_code = :responseCode,
+            mock_response_headers = :headers,
+            mock_response_body = :body,
+            mock_enabled = 1
+        WHERE url = :url
+    """)
+    suspend fun updateMockResponseByUrl(
+        url: String,
+        responseCode: Int,
+        headers: String?,
+        body: String?
+    )
+
+    /**
+     * Clear mock data for ALL transactions with the same URL
+     */
+    @Query("""
+        UPDATE http_transactions
+        SET mock_response_code = NULL,
+            mock_response_headers = NULL,
+            mock_response_body = NULL,
+            mock_enabled = 0
+        WHERE url = :url
+    """)
+    suspend fun clearMockByUrl(url: String)
 
     /**
      * Get mock response for a URL (used by interceptor)

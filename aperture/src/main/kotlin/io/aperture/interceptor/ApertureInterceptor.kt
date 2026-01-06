@@ -217,7 +217,7 @@ class ApertureInterceptor(
             responseHeaders["Content-Type"]?.toMediaTypeOrNull()
         )
 
-        // Save transaction record with mock flag
+        // Save transaction record with mock flag and mock configuration
         val endTime = System.currentTimeMillis()
         val mockedTransaction = transaction.copy(
             responseDate = endTime,
@@ -230,7 +230,12 @@ class ApertureInterceptor(
             responseBody = mock.mockResponseBody,
             responseBodyIsPlainText = true,
             responsePayloadSize = mock.mockResponseBody?.length?.toLong() ?: 0,
-            isMocked = true
+            isMocked = true,
+            // Copy mock configuration from the template transaction
+            mockEnabled = mock.mockEnabled,
+            mockResponseCode = mock.mockResponseCode,
+            mockResponseHeaders = mock.mockResponseHeaders,
+            mockResponseBody = mock.mockResponseBody
         )
         saveTransactionAsync(mockedTransaction)
 

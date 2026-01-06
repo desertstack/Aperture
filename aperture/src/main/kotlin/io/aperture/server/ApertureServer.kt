@@ -260,6 +260,32 @@ class ApertureServer(
                 call.respond(updated.toDto())
             }
 
+            // DELETE /api/transactions/{id}/mock - Clear mock configuration
+            delete("/{id}/mock") {
+                val id = call.parameters["id"]?.toLongOrNull()
+                if (id == null) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
+                        error = "Bad Request",
+                        message = "Invalid transaction ID"
+                    ))
+                    return@delete
+                }
+
+                repository.clearMock(id)
+
+                val updated = repository.getById(id)
+                if (updated == null) {
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(
+                        error = "Not Found",
+                        message = "Transaction not found"
+                    ))
+                    return@delete
+                }
+
+                eventFlow.emit(ServerEvent.TransactionUpdated(updated.toDto()))
+                call.respond(updated.toDto())
+            }
+
             // DELETE /api/transactions/{id} - Delete single transaction
             delete("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull()

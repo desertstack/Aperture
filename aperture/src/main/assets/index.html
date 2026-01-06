@@ -63,94 +63,7 @@
 
         .app-container {
             display: flex;
-            flex-direction: column;
             height: 100vh;
-        }
-
-        /* Header */
-        header {
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
-
-        .header-content {
-            max-width: 100%;
-            padding: 20px 24px 16px;
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .header-title {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        h1 {
-            font-size: 20px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-        }
-
-        .header-subtitle {
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-tertiary);
-        }
-
-        .status-dot.connected {
-            background: var(--status-2xx);
-        }
-
-        .status-dot.error {
-            background: var(--status-5xx);
-        }
-
-        /* Stats Bar */
-        .stats-bar {
-            display: flex;
-            gap: 24px;
-            padding: 0 24px 16px;
-        }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
         }
 
         /* Main Content - Two Pane Layout */
@@ -170,12 +83,98 @@
             background: var(--bg-surface);
         }
 
+        /* Left Pane Header */
+        .left-pane-header {
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-content {
+            padding: 20px 16px 16px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+        }
+
+        .status-dot.connected {
+            background: var(--status-2xx);
+        }
+
+        .status-dot.error {
+            background: var(--status-5xx);
+        }
+
+        /* Stats Bar - Compact for left pane */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 0 16px 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
         .controls {
-            padding: 16px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            flex-shrink: 0;
         }
 
         .controls-row {
@@ -349,7 +348,7 @@
         }
 
         .detail-container {
-            padding: 24px;
+            padding: 20px 24px 24px;
         }
 
         .detail-empty {
@@ -368,8 +367,8 @@
         }
 
         .detail-header {
-            margin-bottom: 24px;
-            padding-bottom: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -389,7 +388,7 @@
         }
 
         .detail-section {
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .section-title {
@@ -585,9 +584,18 @@
             .left-pane {
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
+                max-height: 50vh;
             }
 
             .stats-bar {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            h1 {
+                font-size: 16px;
+            }
+
+            .controls-row {
                 flex-wrap: wrap;
             }
         }
@@ -595,42 +603,44 @@
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <div class="header-content">
-                <div class="header-top">
-                    <div class="header-title">
-                        <h1>Aperture Network Inspector</h1>
-                        <div class="header-subtitle">Real-time HTTP traffic monitoring and mocking</div>
-                    </div>
-                    <div class="connection-status">
-                        <span class="status-dot" id="status-indicator"></span>
-                        <span id="status-text">Connecting...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <div class="stat-label">Total Requests</div>
-                    <div class="stat-value" id="stat-total">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Mocked</div>
-                    <div class="stat-value" id="stat-mocked">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Failed</div>
-                    <div class="stat-value" id="stat-failed">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Avg Duration</div>
-                    <div class="stat-value" id="stat-duration">0ms</div>
-                </div>
-            </div>
-        </header>
-
         <div class="main-content">
             <!-- Left Pane -->
             <div class="left-pane">
+                <!-- Header inside left pane -->
+                <div class="left-pane-header">
+                    <div class="header-content">
+                        <div class="header-top">
+                            <div class="header-title">
+                                <h1>Aperture Network Inspector</h1>
+                                <div class="header-subtitle">Real-time HTTP monitoring & mocking</div>
+                            </div>
+                            <div class="connection-status">
+                                <span class="status-dot" id="status-indicator"></span>
+                                <span id="status-text">Connecting...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Requests</div>
+                            <div class="stat-value" id="stat-total">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Mocked</div>
+                            <div class="stat-value" id="stat-mocked">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Failed</div>
+                            <div class="stat-value" id="stat-failed">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg Duration</div>
+                            <div class="stat-value" id="stat-duration">0ms</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
                 <div class="controls">
                     <input type="text" class="search-box" id="search" placeholder="Search by URL...">
                     <div class="controls-row">
@@ -649,10 +659,12 @@
                             <option value="4xx">4xx Client Error</option>
                             <option value="5xx">5xx Server Error</option>
                         </select>
-                        <button class="btn" onclick="app.refresh()">🔄 Refresh</button>
-                        <button class="btn btn-danger" onclick="app.clearAll()">🗑️ Clear</button>
+                        <button class="btn" onclick="app.refresh()">🔄</button>
+                        <button class="btn btn-danger" onclick="app.clearAll()">🗑️</button>
                     </div>
                 </div>
+
+                <!-- Transaction List (only this scrolls) -->
                 <div class="transaction-list" id="transaction-list">
                     <div class="empty-state">
                         <div class="empty-state-icon">📡</div>
@@ -662,7 +674,7 @@
                 </div>
             </div>
 
-            <!-- Right Pane -->
+            <!-- Right Pane (scrolls from top to bottom) -->
             <div class="right-pane" id="right-pane">
                 <div class="detail-empty">
                     <div class="detail-empty-icon">←</div>
@@ -760,7 +772,8 @@
             renderTransactionItem(t) {
                 const statusClass = t.error ? 'error' : t.responseCode ? Math.floor(t.responseCode / 100) + 'xx' : 'pending';
                 const statusText = t.error ? 'ERR' : t.responseCode || '...';
-                const mockIndicator = t.mockEnabled ? '<span class="mock-indicator">⚡ Mock</span>' : '';
+                // Show mock indicator ONLY if this specific transaction returned a mocked response
+                const mockIndicator = t.isMocked ? '<span class="mock-indicator" title="This response was mocked">⚡ Mock</span>' : '';
                 const selectedClass = this.selectedTransactionId === t.id ? 'selected' : '';
 
                 return `
@@ -836,7 +849,7 @@
                                 </span>
                                 <span>${t.duration || 0}ms</span>
                                 <span>${this.formatBytes((t.requestPayloadSize || 0) + (t.responsePayloadSize || 0))}</span>
-                                ${t.mockEnabled ? '<span class="mock-indicator">⚡ Mock</span>' : ''}
+                                ${t.isMocked ? '<span class="mock-indicator">⚡ Mocked</span>' : ''}
                             </div>
                         </div>
 
@@ -905,11 +918,16 @@
                             <div class="section-title">Mock Configuration</div>
                             <div class="section-divider"></div>
                             <div class="mock-config">
+                                <div style="background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 12px; color: var(--text-secondary); border-left: 3px solid var(--mock-color);">
+                                    ℹ️ <strong>URL-based mocking:</strong> Mock configuration applies to <strong>ALL transactions</strong> with this URL. When enabled, <strong>all future requests</strong> to <code style="background: var(--bg-surface); padding: 2px 6px; border-radius: 3px;">${t.url}</code> will return the mocked response instead of real network calls.
+                                </div>
+                                ${t.mockEnabled ? '<div style="margin-bottom: 16px; padding: 10px 12px; background: #EBF5F0; border-radius: 6px; font-size: 13px; color: #1A7F37; border: 1px solid #1A7F37;"><strong>✓ Mock Active:</strong> Future requests to this URL will be mocked. Uncheck below to disable.</div>' : ''}
+                                ${t.mockResponseCode || t.mockResponseBody ? '<div style="margin-bottom: 16px; padding: 10px 12px; background: var(--bg-hover); border-radius: 6px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border-color);">💾 <strong>Mock data saved</strong> - Toggle the checkbox to enable/disable</div>' : ''}
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="mock-enabled" ${t.mockEnabled ? 'checked' : ''}
                                                onchange="app.toggleMock(${t.id}, this.checked)">
-                                        <span>Enable Mock Response</span>
+                                        <span><strong>${t.mockEnabled ? 'Mocking Enabled' : 'Mocking Disabled'}</strong> - ${t.mockEnabled ? 'Uncheck to use real API' : 'Check to use mocked response'}</span>
                                     </label>
                                 </div>
                                 <div class="form-group">
@@ -921,7 +939,10 @@
                                     <label class="form-label">Response Body</label>
                                     <textarea class="form-textarea" id="mock-body">${t.mockResponseBody || ''}</textarea>
                                 </div>
-                                <button class="btn btn-primary" onclick="app.saveMock(${t.id})">💾 Save Mock Configuration</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-primary" onclick="app.saveMock(${t.id})" style="flex: 1;">💾 Save & Enable Mock</button>
+                                    ${t.mockResponseCode || t.mockResponseBody ? '<button class="btn btn-danger" onclick="app.clearMock(' + t.id + ')">🗑️ Clear Mock</button>' : ''}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -957,11 +978,32 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ enabled })
                     });
-                    this.showToast(enabled ? 'Mock enabled' : 'Mock disabled');
+                    this.showToast(enabled
+                        ? '✓ Mock enabled for this URL - Future requests will be mocked'
+                        : '✓ Mock disabled for this URL - Using real API calls');
                     await this.loadTransactions();
                     await this.selectTransaction(id);
                 } catch (err) {
                     this.showToast('Failed to update mock status');
+                }
+            },
+
+            async clearMock(id) {
+                if (!confirm('Are you sure you want to clear the mock configuration for this endpoint? This will remove the saved mock data and disable mocking for ALL requests to this URL.')) {
+                    return;
+                }
+
+                try {
+                    // Clear mock configuration using DELETE endpoint
+                    await fetch(`/api/transactions/${id}/mock`, {
+                        method: 'DELETE'
+                    });
+
+                    this.showToast('✓ Mock configuration cleared for this URL');
+                    await this.loadTransactions();
+                    await this.selectTransaction(id);
+                } catch (err) {
+                    this.showToast('Failed to clear mock configuration');
                 }
             },
 
@@ -980,7 +1022,8 @@
                         })
                     });
 
-                    this.showToast('Mock configuration saved');
+                    this.showToast('✓ Mock saved & enabled for this URL - All future requests will be mocked');
+                    await this.loadTransactions();
                     await this.selectTransaction(id);
                 } catch (err) {
                     this.showToast('Failed to save mock configuration');
