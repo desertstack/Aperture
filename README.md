@@ -27,13 +27,36 @@
 Add to your app's `build.gradle.kts`:
 
 ```kotlin
-//clone and add to settings.gradle.kts
-    project(":aperture").projectDir = file("<path>")
+dependencies {
+    debugImplementation("io.github.desertstack:aperture:1.0.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.0.0")
 
-//in build.gradle.kts
-implementation(project(":aperture"))
-
+    // Required: Aperture hooks into your OkHttp client and does not bundle it
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+}
 ```
+
+Aperture's own dependencies (Ktor, Room, coroutines, serialization) come in
+transitively — you do not need to declare them.
+
+### 1a. Exclude duplicate Netty metadata
+
+Aperture embeds a Ktor/Netty server, which ships metadata files that collide at
+packaging time. Add this to the same `build.gradle.kts`, inside `android { }`:
+
+```kotlin
+packaging {
+    resources {
+        excludes += listOf(
+            "META-INF/INDEX.LIST",
+            "META-INF/io.netty.versions.properties"
+        )
+    }
+}
+```
+
+Without it the build fails with a duplicate-resource error. This cannot be
+supplied by the library, since packaging options are application-level.
 
 ### 2. Initialize in Application Class
 
