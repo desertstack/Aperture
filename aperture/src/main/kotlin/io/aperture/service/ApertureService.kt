@@ -32,6 +32,10 @@ class ApertureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "Service started")
 
+        // IMPORTANT: Call startForeground immediately to avoid ANR/crash
+        // Android requires this within 5 seconds of startForegroundService()
+        startForeground(NOTIFICATION_ID, createNotification())
+
         when (intent?.action) {
             ACTION_START_SERVER -> startApertureServer()
             ACTION_STOP_SERVER -> stopApertureServer()
@@ -55,7 +59,6 @@ class ApertureService : Service() {
     private fun startApertureServer() {
         if (server != null) {
             Log.d(TAG, "Server already running")
-            updateNotification()
             return
         }
 
@@ -63,9 +66,6 @@ class ApertureService : Service() {
             // Get the server instance from Aperture
             server = Aperture.getServerInstance()
             server?.start()
-
-            // Start as foreground service with notification
-            startForeground(NOTIFICATION_ID, createNotification())
 
             // Start periodic notification updates (every 5 seconds)
             startNotificationUpdates()
