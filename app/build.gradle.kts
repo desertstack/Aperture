@@ -49,11 +49,16 @@ dependencies {
     implementation(libs.material)
 
     // Aperture for debug builds, no-op for release
-    debugImplementation(project(":aperture"))
-    releaseImplementation(project(":aperture-no-op"))
+//    debugImplementation(project(":aperture"))
+//    releaseImplementation(project(":aperture-no-op"))
+
+
+    debugImplementation("io.github.desertstack:aperture:1.0.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // OkHttp for network requests
-    implementation(libs.okhttp)
+//    implementation(libs.okhttp)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
