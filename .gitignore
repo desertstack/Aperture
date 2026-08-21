@@ -18,3 +18,7 @@ prd.md
 .idea/
 aperture/build
 aperture-no-op/build
+# Gradle build output for every module (the entries above only cover
+# specific paths; tracked files ignore .gitignore, hence the untracking).
+build/
+.kotlin/
