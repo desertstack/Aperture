@@ -19,6 +19,7 @@
 - 📊 **Statistics Dashboard** - View aggregated request metrics
 - 🔔 **Foreground Service** - Server runs reliably in background with persistent notification
 - ⚡ **Quick Actions** - Stop server or clear data directly from notification
+- 🛡️ **Safe to Drop In** - Never crashes your app, never blocks its main thread, never fails a request
 
 ## 🚀 Quick Start
 
@@ -28,8 +29,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.0.0")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.0.0")
+    debugImplementation("io.github.desertstack:aperture:1.1.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.0")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -77,6 +78,11 @@ class MyApp : Application() {
 }
 ```
 
+Call `initialize()` once, from `Application.onCreate()`. The system also runs that method when
+your process starts in the background, for a push message, a background job or a widget update.
+Aperture handles that case by itself. See
+[Background process starts](#background-process-starts).
+
 ### 3. Add Interceptor to OkHttp
 
 ```kotlin
@@ -85,17 +91,32 @@ val client = OkHttpClient.Builder()
     .build()
 ```
 
+`getInterceptor()` never throws. If `initialize()` did not run, or it failed, the call logs and
+returns a pass-through interceptor, so your OkHttp client works either way.
+
 ### 4. Make HTTP Requests
 
 That's it! Make any HTTP request using your OkHttp client, and Aperture will capture it.
 
 ### 5. View in Browser
 
-Check your Logcat for the server URL:
+Filter your Logcat on the `Aperture` tag. The server prints where to reach it:
 
 ```
-Aperture: Server started at: http://192.168.1.100:8080
+Aperture: ═══════════════════════════════════════
+Aperture: 🌐 Aperture Server Started
+Aperture: ═══════════════════════════════════════
+Aperture: 📱 Same Network:  http://192.168.1.100:8080
+Aperture: 🔌 ADB Forward:   http://localhost:8080
+Aperture:
+Aperture: 💻 To access from computer when on cellular:
+Aperture:    Run: adb forward tcp:8080 tcp:8080
+Aperture:    Open: http://localhost:8080
+Aperture: ═══════════════════════════════════════
 ```
+
+The server binds its port on a background thread, so this banner appears a moment after your
+app starts.
 
 
 <img src="https://github.com/desertstack/Aperture/blob/main/web_ui.png" width=50% height=50%>
@@ -275,9 +296,16 @@ Aperture.clearAllData()
 Aperture.clearOldData(olderThanDays = 7)
 
 // Get statistics
-val count = Aperture.getTransactionCount()
+val count = Aperture.getTransactionCount()             // suspending, reads the database
+val lastCount = Aperture.getTransactionCountSnapshot() // last known count, safe on any thread
 val transaction = Aperture.getTransaction(id)
 ```
+
+`startServer()` and `stopServer()` return at once and do their work on a background thread,
+because Ktor binds and releases its port on the thread that calls it. `isServerRunning()`
+therefore turns true shortly after `startServer()` returns, not immediately.
+
+None of these calls throw. Before `initialize()`, or after it failed, they log and do nothing.
 
 ## 🔐 Authentication
 
@@ -400,14 +428,60 @@ limitations under the License.
 - Database schema influenced by Chucker's proven design
 - Built with ❤️ for the Android community
 
+## 📋 Changelog
+
+### 1.1.0
+
+Aperture 1.0.0 could crash the app it was inspecting. This release makes the library safe to
+drop into any app. Upgrade from 1.0.0.
+
+**Fixed**
+
+- **The host app no longer crashes on a background process start.** Android 12+ refuses a
+  foreground service start while the app is in the background, and threw
+  `ForegroundServiceStartNotAllowedException` out of `Application.onCreate()`. Aperture now
+  catches the refusal, runs the server in the app process, and moves it into the service when
+  the app shows an activity.
+- **The main thread does no server work.** Ktor binds and releases its port on the thread that
+  calls it. Aperture starts and stops the server on a background thread, so app startup does
+  not wait for it.
+- **The notification reads no database.** The transaction count and the IP address are cached
+  and refreshed on the notification timer thread.
+- **The service survives the Android 15 budget.** A `dataSync` foreground service loses its
+  daily budget after six hours. Aperture now stops the service on `onTimeout()` and keeps the
+  server in the process, instead of leaving the app to an ANR.
+- **The service no longer restarts itself into a refused state.** `START_STICKY` became
+  `START_NOT_STICKY`.
+
+**Behaviour changes**
+
+- `getInterceptor()` no longer throws `IllegalStateException` before `initialize()`. It logs
+  and returns a pass-through interceptor, so your OkHttp client keeps working.
+- `startServer()` and `getServerUrl()` degrade the same way. `getServerUrl()` returns an empty
+  string when Aperture is not initialized.
+- `initialize()` catches its own failures. A broken database no longer takes the app down.
+- `isServerRunning()` turns true shortly after `startServer()` returns, because the start now
+  happens on a background thread.
+
+**Added**
+
+- `getTransactionCountSnapshot()`, the last known transaction count, with no database read.
+  Present in both the full and the no-op artifact.
+
+### 1.0.0
+
+First release.
+
 ## 🗺️ Roadmap
 
-### v1.0 (Current)
+### v1.1 (Current)
 - ✅ HTTP/HTTPS traffic capture
 - ✅ Web-based UI
 - ✅ Response mocking
 - ✅ Real-time updates
 - ✅ Statistics dashboard
+- ✅ Safe to initialize from a background process start
+- ✅ No server work on the main thread
 
 ### v2.0 (Planned)
 - WebSocket inspection
@@ -445,6 +519,17 @@ ApertureConfig(
 ### What about SSL certificate pinning?
 
 Aperture works normally with SSL pinning since it operates as an OkHttp interceptor, not a proxy.
+
+### The notification did not appear. What happened?
+
+Two causes, and neither stops the inspector.
+
+Your process started in the background, so Android refused the foreground service. Aperture
+logs `Foreground service refused, starting server in-process` and runs the server anyway. Open
+your app once and the notification appears. Until then, reach the web UI over
+`adb forward tcp:8080 tcp:8080`.
+
+Or the app has no notification permission on Android 13+. See the next question.
 
 ### Do I need to request notification permission?
 
