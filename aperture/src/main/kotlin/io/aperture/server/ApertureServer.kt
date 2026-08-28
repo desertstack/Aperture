@@ -30,12 +30,20 @@ class ApertureServer(
     private val authToken: String?
 ) {
     private val tag = "ApertureServer"
+
+    // Read from the caller thread by isRunning(), written under the lock by start() and stop().
+    @Volatile
     private var server: NettyApplicationEngine? = null
     private val eventFlow = MutableSharedFlow<ServerEvent>(replay = 0, extraBufferCapacity = 100)
 
     /**
      * Start the web server (FR-WEB-002)
+     *
+     * Blocks the calling thread until Netty binds the port, so call it off the main thread.
+     * Synchronized because the foreground service and the in-process fallback can both ask
+     * for a start, and a second bind on the same port fails.
      */
+    @Synchronized
     fun start() {
         if (server != null) {
             Log.w(tag, "Server already running")
@@ -56,7 +64,10 @@ class ApertureServer(
 
     /**
      * Stop the web server
+     *
+     * Waits for Netty to wind down, up to the grace period, so call it off the main thread.
      */
+    @Synchronized
     fun stop() {
         server?.stop(1000, 2000)
         server = null

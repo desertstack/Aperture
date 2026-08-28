@@ -71,6 +71,11 @@ object Aperture {
     }
 
     @JvmStatic
+    inline fun getTransactionCountSnapshot(): Int {
+        return 0
+    }
+
+    @JvmStatic
     suspend inline fun getTransaction(id: Long): Any? {
         return null
     }

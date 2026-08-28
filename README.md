@@ -180,6 +180,27 @@ This ensures:
 - ✅ Works with cellular data via ADB forwarding
 - ✅ Complies with Android foreground service requirements
 
+### What Aperture guarantees
+
+Aperture is a debug tool inside someone else's app, so it holds to three rules:
+
+- **It does not crash the host app.** Every entry point catches its own failures. If
+  `initialize()` fails, `getInterceptor()` returns a pass-through interceptor and the app keeps
+  its network stack.
+- **It does not block the main thread.** Ktor binds its socket on the calling thread, so
+  Aperture starts and stops the server on a background thread. The notification reads cached
+  values, never the database.
+- **It does not fail your requests.** A capture error is logged and dropped. Your request goes
+  out once and your response comes back untouched.
+
+### Background process starts
+
+Android 12+ (API 31) refuses a foreground service start while the app is in the background.
+`Aperture.initialize()` runs from `Application.onCreate()`, which the system also calls when the
+process starts for a push message, a background job or a widget update. Aperture handles the
+refusal: it starts the server in the app process, and moves it into the foreground service when
+the app shows an activity. The host app does not crash, and the inspector stays available.
+
 ## 📖 Configuration
 
 ### Basic Configuration

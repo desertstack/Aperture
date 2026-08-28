@@ -32,18 +32,65 @@ class ApertureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "Service started")
 
-        // IMPORTANT: Call startForeground immediately to avoid ANR/crash
-        // Android requires this within 5 seconds of startForegroundService()
-        startForeground(NOTIFICATION_ID, createNotification())
+        if (intent?.action == ACTION_STOP_SERVER) {
+            stopApertureServer()
+            return START_NOT_STICKY
+        }
+
+        // Android gives a service started with startForegroundService() 5 seconds to promote
+        // itself, and refuses the promotion if the process went to the background in between.
+        if (!promoteToForeground()) {
+            // The service hosts the notification, not the server, so keep the server up in the
+            // process and let the service go. The host app must not crash over a notification.
+            if (Aperture.getServerInstance() != null) {
+                Aperture.startServerDirectly()
+            }
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         when (intent?.action) {
-            ACTION_START_SERVER -> startApertureServer()
-            ACTION_STOP_SERVER -> stopApertureServer()
             ACTION_CLEAR_DATA -> clearAllData()
             else -> startApertureServer()
         }
 
-        return START_STICKY
+        // START_STICKY would have the system restart this service after a background kill.
+        // That restart runs Application.onCreate() again in the background, which is the one
+        // state where Android refuses the foreground start. Aperture restarts the service
+        // itself when the app becomes visible again.
+        return START_NOT_STICKY
+    }
+
+    /**
+     * Show the notification and become a foreground service.
+     *
+     * @return false if Android refused the promotion (API 31+ background restriction).
+     */
+    private fun promoteToForeground(): Boolean {
+        return try {
+            startForeground(NOTIFICATION_ID, createNotification())
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Cannot promote to a foreground service: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Android 15+ withdraws the daily budget of a dataSync foreground service after six hours,
+     * and gives the app a few seconds to stop it. An app that does not stop it gets an ANR.
+     *
+     * Give up the notification and leave the server running in the process, the same way a
+     * refused foreground start does.
+     */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        Log.w(TAG, "Android withdrew the foreground service budget, keeping the server in-process")
+
+        // Clear the field first: onDestroy stops the server only when the service still owns it.
+        server = null
+        notificationUpdateTimer?.cancel()
+        stopForegroundCompat()
+        stopSelf()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -62,19 +109,23 @@ class ApertureService : Service() {
             return
         }
 
-        try {
-            // Get the server instance from Aperture
-            server = Aperture.getServerInstance()
-            server?.start()
-
-            // Start periodic notification updates (every 5 seconds)
-            startNotificationUpdates()
-
-            Log.i(TAG, "Aperture server started in foreground service")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start server", e)
+        val instance = Aperture.getServerInstance()
+        if (instance == null) {
+            Log.w(TAG, "Aperture is not initialized")
             stopSelf()
+            return
         }
+
+        server = instance
+
+        // Aperture starts the server on the IO dispatcher. onStartCommand runs on the main
+        // thread, and Ktor blocks its caller until the socket is bound.
+        Aperture.startServerDirectly(onFailure = { stopSelf() })
+
+        // Start periodic notification updates (every 5 seconds)
+        startNotificationUpdates()
+
+        Log.i(TAG, "Aperture server starting in foreground service")
     }
 
     private fun startNotificationUpdates() {
@@ -84,20 +135,30 @@ class ApertureService : Service() {
             initialDelay = 5000L,
             period = 5000L
         ) {
+            // The timer runs on its own thread, which is where the database read belongs.
+            Aperture.refreshNotificationData()
             updateNotification()
         }
     }
 
     private fun stopApertureServer() {
-        server?.stop()
-        server = null
+        if (server != null) {
+            // Aperture owns the server and stops it off the main thread.
+            Aperture.stopServerDirectly()
+            server = null
+        }
+
+        stopForegroundCompat()
+        stopSelf()
+    }
+
+    private fun stopForegroundCompat() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
             @Suppress("DEPRECATION")
             stopForeground(true)
         }
-        stopSelf()
     }
 
     private fun clearAllData() {
@@ -128,12 +189,10 @@ class ApertureService : Service() {
     }
 
     private fun createNotification(): Notification {
+        // Both values are cached. onStartCommand builds this notification on the main thread,
+        // which is no place for a database query or an interface lookup.
         val serverUrl = Aperture.getServerUrl()
-        val transactionCount = try {
-            kotlinx.coroutines.runBlocking { Aperture.getTransactionCount() }
-        } catch (e: Exception) {
-            0
-        }
+        val transactionCount = Aperture.getTransactionCountSnapshot()
 
         // Intent to open browser with server URL
         val openBrowserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl)).apply {
@@ -213,28 +272,49 @@ class ApertureService : Service() {
         const val ACTION_CLEAR_DATA = "io.aperture.action.CLEAR_DATA"
 
         /**
-         * Start the Aperture service
+         * Start the Aperture service.
+         *
+         * Android 12+ refuses a foreground service start while the app is in the background and
+         * throws ForegroundServiceStartNotAllowedException. Host apps call Aperture.initialize()
+         * from Application.onCreate(), which also runs when the process starts for a push, a job,
+         * a widget or a service restart, so the refusal is expected. It must never reach the host.
+         *
+         * @return true if the platform accepted the start request.
          */
-        fun start(context: Context) {
+        fun start(context: Context): Boolean {
             val intent = Intent(context, ApertureService::class.java).apply {
                 action = ACTION_START_SERVER
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            return try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot start the service from the background: ${e.message}")
+                false
             }
         }
 
         /**
-         * Stop the Aperture service
+         * Stop the Aperture service.
+         *
+         * Android 8+ also refuses plain service starts from the background, so this reports the
+         * refusal in the log instead of throwing at the caller.
          */
         fun stop(context: Context) {
             val intent = Intent(context, ApertureService::class.java).apply {
                 action = ACTION_STOP_SERVER
             }
-            context.startService(intent)
+
+            try {
+                context.startService(intent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot stop the service from the background: ${e.message}")
+            }
         }
     }
 }

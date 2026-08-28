@@ -36,6 +36,10 @@ android {
         jvmTarget = "11"
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
 }
 
 mavenPublishing {
@@ -84,6 +88,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.okhttp)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
