@@ -161,11 +161,13 @@ class ApertureServer(
                 val method = call.request.queryParameters["method"]
                 val status = call.request.queryParameters["status"]?.toIntOrNull()
 
+                // Summaries, not whole transactions. The list shows no bodies, and loading
+                // up to 500 of them would hold hundreds of megabytes in the host app.
                 val transactions = when {
-                    search != null -> repository.searchByUrl(search, limit.coerceAtMost(500), offset)
-                    method != null -> repository.filterByMethod(method, limit.coerceAtMost(500), offset)
-                    status != null -> repository.filterByStatusCode(status, limit.coerceAtMost(500), offset)
-                    else -> repository.getAll(limit.coerceAtMost(500), offset)
+                    search != null -> repository.searchSummariesByUrl(search, limit.coerceAtMost(500), offset)
+                    method != null -> repository.filterSummariesByMethod(method, limit.coerceAtMost(500), offset)
+                    status != null -> repository.filterSummariesByStatusCode(status, limit.coerceAtMost(500), offset)
+                    else -> repository.getSummaries(limit.coerceAtMost(500), offset)
                 }
 
                 val total = repository.getCount()
@@ -366,7 +368,7 @@ class ApertureServer(
                             when (event) {
                                 is ServerEvent.NewTransaction -> {
                                     write("event: new_transaction\n")
-                                    write("data: ${Json.encodeToString(TransactionDto.serializer(), event.transaction)}\n\n")
+                                    write("data: ${Json.encodeToString(TransactionSummaryDto.serializer(), event.transaction)}\n\n")
                                 }
                                 is ServerEvent.TransactionUpdated -> {
                                     write("event: updated_transaction\n")
@@ -403,7 +405,7 @@ class ApertureServer(
         monitoringJob?.cancel()
         monitoringJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                repository.getLatestAsFlow()
+                repository.getLatestSummaryAsFlow()
                     .distinctUntilChanged()
                     .collect { latest ->
                         latest?.let {
@@ -470,7 +472,7 @@ class ApertureServer(
  * Server-Sent Events types
  */
 sealed class ServerEvent {
-    data class NewTransaction(val transaction: TransactionDto) : ServerEvent()
+    data class NewTransaction(val transaction: TransactionSummaryDto) : ServerEvent()
     data class TransactionUpdated(val transaction: TransactionDto) : ServerEvent()
     data class TransactionDeleted(val id: Long) : ServerEvent()
     object AllTransactionsDeleted : ServerEvent()

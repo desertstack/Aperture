@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import io.aperture.data.entity.HttpTransaction
+import io.aperture.data.entity.TransactionSummary
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -34,13 +35,83 @@ interface HttpTransactionDao {
     suspend fun getAll(limit: Int, offset: Int): List<HttpTransaction>
 
     /**
-     * Get the newest transaction as Flow for real-time updates (FR-DB-013)
+     * Get transaction summaries ordered by request date (latest first) (FR-DB-006)
+     *
+     * The column list is deliberate. `SELECT *` would pull every stored body through the
+     * CursorWindow and into memory for a view that shows none of them.
+     */
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions ORDER BY request_date DESC LIMIT :limit OFFSET :offset
+    """)
+    suspend fun getAllSummaries(limit: Int, offset: Int): List<TransactionSummary>
+
+    /**
+     * Search transaction summaries by URL (FR-DB-008)
+     */
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions WHERE url LIKE '%' || :searchQuery || '%'
+        ORDER BY request_date DESC LIMIT :limit OFFSET :offset
+    """)
+    suspend fun searchSummariesByUrl(searchQuery: String, limit: Int, offset: Int): List<TransactionSummary>
+
+    /**
+     * Filter transaction summaries by HTTP method (FR-DB-009)
+     */
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions WHERE method = :method
+        ORDER BY request_date DESC LIMIT :limit OFFSET :offset
+    """)
+    suspend fun filterSummariesByMethod(method: String, limit: Int, offset: Int): List<TransactionSummary>
+
+    /**
+     * Filter transaction summaries by status code (FR-DB-010)
+     */
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions WHERE response_code = :statusCode
+        ORDER BY request_date DESC LIMIT :limit OFFSET :offset
+    """)
+    suspend fun filterSummariesByStatusCode(statusCode: Int, limit: Int, offset: Int): List<TransactionSummary>
+
+    /**
+     * Get the newest transaction summary as Flow for real-time updates (FR-DB-013)
      *
      * Deliberately one row. Selecting the whole table on every insert loads every stored body
      * into memory, and a single row above the CursorWindow limit fails the query outright.
      */
-    @Query("SELECT * FROM http_transactions ORDER BY request_date DESC LIMIT 1")
-    fun getLatestAsFlow(): Flow<HttpTransaction?>
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions ORDER BY request_date DESC LIMIT 1
+    """)
+    fun getLatestSummaryAsFlow(): Flow<TransactionSummary?>
 
     /**
      * Replace request bodies that Android cannot read back (FR-DB-016)

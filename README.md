@@ -452,15 +452,24 @@ Fixes a crash that reached back to 1.0.0. Upgrade from any earlier version.
 - **Stopping the server releases its database watcher.** A stop and start cycle leaked one
   collector per start.
 
+- **The list endpoint carries no bodies.** `GET /api/transactions` returned every body of
+  every listed row, up to 500 of them, held in memory and serialized to JSON. It now answers
+  with metadata only, read through a column projection, so the bodies never leave SQLite. The
+  live stream carries the same summary.
+
 **Behaviour changes**
 
+- `GET /api/transactions` and the `new_transaction` stream event no longer carry `requestBody`,
+  `responseBody`, `requestHeaders`, `responseHeaders`, `mockResponseBody` or
+  `mockResponseHeaders`. Read one transaction from `GET /api/transactions/{id}` for those. The
+  bundled web UI already did.
 - `maxBodySize` above 512 KB has no effect. Android cannot read back a larger row, so the
   ceiling wins. Use the setting to store less, not more.
 
 **Removed**
 
-- `TransactionRepository.getAllAsFlow()`, replaced by `getLatestAsFlow()`. Unreachable through
-  the public API, since `Aperture.getRepository()` is internal.
+- `TransactionRepository.getAllAsFlow()`, replaced by `getLatestSummaryAsFlow()`. Unreachable
+  through the public API, since `Aperture.getRepository()` is internal.
 
 ### 1.1.0
 

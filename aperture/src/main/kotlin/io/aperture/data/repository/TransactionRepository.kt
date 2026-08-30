@@ -2,6 +2,7 @@ package io.aperture.data.repository
 
 import io.aperture.data.dao.HttpTransactionDao
 import io.aperture.data.entity.HttpTransaction
+import io.aperture.data.entity.TransactionSummary
 import io.aperture.util.BodyEncoder
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
@@ -41,10 +42,38 @@ class TransactionRepository(
     }
 
     /**
-     * Get the newest transaction as Flow for real-time updates
+     * Get the newest transaction summary as Flow for real-time updates
      */
-    fun getLatestAsFlow(): Flow<HttpTransaction?> {
-        return dao.getLatestAsFlow()
+    fun getLatestSummaryAsFlow(): Flow<TransactionSummary?> {
+        return dao.getLatestSummaryAsFlow()
+    }
+
+    /**
+     * List transactions without their bodies, for the list view
+     */
+    suspend fun getSummaries(limit: Int = 50, offset: Int = 0): List<TransactionSummary> {
+        return dao.getAllSummaries(limit, offset)
+    }
+
+    /**
+     * Search transactions by URL, without their bodies
+     */
+    suspend fun searchSummariesByUrl(query: String, limit: Int = 50, offset: Int = 0): List<TransactionSummary> {
+        return dao.searchSummariesByUrl(query, limit, offset)
+    }
+
+    /**
+     * Filter transactions by method, without their bodies
+     */
+    suspend fun filterSummariesByMethod(method: String, limit: Int = 50, offset: Int = 0): List<TransactionSummary> {
+        return dao.filterSummariesByMethod(method, limit, offset)
+    }
+
+    /**
+     * Filter transactions by status code, without their bodies
+     */
+    suspend fun filterSummariesByStatusCode(statusCode: Int, limit: Int = 50, offset: Int = 0): List<TransactionSummary> {
+        return dao.filterSummariesByStatusCode(statusCode, limit, offset)
     }
 
     /**

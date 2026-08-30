@@ -743,7 +743,9 @@
                     if (this.selectedTransactionId) {
                         const stillExists = this.transactions.find(t => t.id === this.selectedTransactionId);
                         if (stillExists) {
-                            this.renderDetails(stillExists);
+                            // The list carries metadata only, so read the open transaction
+                            // back in full instead of drawing details from the list item.
+                            await this.selectTransaction(this.selectedTransactionId);
                         } else {
                             this.clearSelection();
                         }
