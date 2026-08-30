@@ -53,8 +53,8 @@ dependencies {
 //    releaseImplementation(project(":aperture-no-op"))
 
 
-    debugImplementation("io.github.desertstack:aperture:1.1.0")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.0")
+    debugImplementation("io.github.desertstack:aperture:1.1.1")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // OkHttp for network requests
