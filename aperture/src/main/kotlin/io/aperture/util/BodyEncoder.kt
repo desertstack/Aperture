@@ -12,6 +12,22 @@ import java.nio.charset.StandardCharsets
 object BodyEncoder {
 
     /**
+     * The largest body Aperture stores, in characters.
+     *
+     * Android reads a row through a CursorWindow of about 2 MB. A row above that limit cannot be
+     * read back at all: every query that touches it throws SQLiteBlobTooBigException, which is
+     * unrecoverable without deleting the row. A transaction holds a request body and a response
+     * body, so each one gets a quarter of the window.
+     */
+    const val MAX_STORED_BODY_CHARS = 512 * 1024
+
+    /** Replaces a stored body that an earlier version wrote above the ceiling */
+    const val OVERSIZED_NOTICE = "[Aperture removed this body: too large for Android to read back]"
+
+    /** Replaces the tail of a body that did not fit */
+    const val TRUNCATION_NOTICE = "\n\n[Aperture truncated this body at 512 KB]"
+
+    /**
      * Check if content type is plain text
      */
     fun isPlainText(contentType: String?): Boolean {
@@ -60,11 +76,18 @@ object BodyEncoder {
     ): Pair<String, Boolean> {
         val size = buffer.size
 
-        // If body exceeds max size, truncate
-        val actualSize = minOf(size, maxSize)
-
         // Check if plain text
         val isPlainText = isPlainText(contentType) && isPlainText(buffer)
+
+        // Read no more than the row can hold. Base64 grows by a third, so it gets fewer bytes.
+        val storageLimit = if (isPlainText) {
+            MAX_STORED_BODY_CHARS.toLong()
+        } else {
+            MAX_STORED_BODY_CHARS.toLong() * 3 / 4
+        }
+
+        // If body exceeds max size, truncate
+        val actualSize = minOf(size, maxSize, storageLimit)
 
         val body = if (isPlainText) {
             // Store as text
@@ -77,7 +100,23 @@ object BodyEncoder {
             Base64.encodeToString(bytes, Base64.NO_WRAP)
         }
 
-        return Pair(body, isPlainText)
+        return Pair(cap(body, truncated = actualSize < size), isPlainText)
+    }
+
+    /**
+     * Hold the stored body under the ceiling and say when something was dropped
+     *
+     * A multi-byte charset and the base64 rounding both leave a few characters of slack, so the
+     * length is checked again here rather than trusted from the byte count.
+     */
+    private fun cap(body: String, truncated: Boolean): String {
+        val room = MAX_STORED_BODY_CHARS - TRUNCATION_NOTICE.length
+
+        return when {
+            body.length > room -> body.take(room) + TRUNCATION_NOTICE
+            truncated -> body + TRUNCATION_NOTICE
+            else -> body
+        }
     }
 
     /**

@@ -34,10 +34,38 @@ interface HttpTransactionDao {
     suspend fun getAll(limit: Int, offset: Int): List<HttpTransaction>
 
     /**
-     * Get all transactions as Flow for real-time updates (FR-DB-013)
+     * Get the newest transaction as Flow for real-time updates (FR-DB-013)
+     *
+     * Deliberately one row. Selecting the whole table on every insert loads every stored body
+     * into memory, and a single row above the CursorWindow limit fails the query outright.
      */
-    @Query("SELECT * FROM http_transactions ORDER BY request_date DESC")
-    fun getAllAsFlow(): Flow<List<HttpTransaction>>
+    @Query("SELECT * FROM http_transactions ORDER BY request_date DESC LIMIT 1")
+    fun getLatestAsFlow(): Flow<HttpTransaction?>
+
+    /**
+     * Replace request bodies that Android cannot read back (FR-DB-016)
+     *
+     * length() runs inside SQLite, so this repairs a row without pulling it through a
+     * CursorWindow. Rows stored before the body ceiling existed need it.
+     *
+     * @return the number of rows repaired
+     */
+    @Query("""
+        UPDATE http_transactions SET request_body = :notice
+        WHERE request_body IS NOT NULL AND length(request_body) > :maxLength
+    """)
+    suspend fun trimOversizedRequestBodies(maxLength: Int, notice: String): Int
+
+    /**
+     * Replace response bodies that Android cannot read back (FR-DB-016)
+     *
+     * @return the number of rows repaired
+     */
+    @Query("""
+        UPDATE http_transactions SET response_body = :notice
+        WHERE response_body IS NOT NULL AND length(response_body) > :maxLength
+    """)
+    suspend fun trimOversizedResponseBodies(maxLength: Int, notice: String): Int
 
     /**
      * Get a single transaction by ID (FR-DB-007)

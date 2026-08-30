@@ -92,6 +92,19 @@ object Aperture {
             return
         }
 
+        // A database written by an earlier version can hold bodies that Android cannot read
+        // back. Repair them before the web UI or the interceptor tries to read one.
+        scope.launch {
+            try {
+                val repaired = repository?.trimOversizedBodies() ?: 0
+                if (repaired > 0) {
+                    android.util.Log.w("Aperture", "Removed $repaired oversized bodies from earlier captures")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Aperture", "Cannot repair oversized bodies", e)
+            }
+        }
+
         // Auto-start server if configured
         if (config.autoStart) {
             startServer()

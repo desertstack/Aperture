@@ -29,8 +29,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.1.0")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.0")
+    debugImplementation("io.github.desertstack:aperture:1.1.1")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.1")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -429,6 +429,38 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 📋 Changelog
+
+### 1.1.1
+
+Fixes a crash that reached back to 1.0.0. Upgrade from any earlier version.
+
+**Fixed**
+
+- **A large captured body no longer crashes the app.** Aperture stored bodies of up to 5 MB,
+  and base64 grew binary ones by a third on top of that. Android reads a row through a
+  CursorWindow of about 2 MB, so one large response made every query that touched it throw
+  `SQLiteBlobTooBigException`. A stored body is now capped at 512 KB, and a truncated body says
+  so.
+- **A database error no longer kills the host app.** The coroutine that watches for new
+  transactions ran with no exception handler, so the failure above reached the default handler.
+  It now logs and stops watching.
+- **The real-time watcher reads one row, not the whole table.** It selected every transaction,
+  with every body, on every insert, and then kept only the newest one.
+- **A database written by an earlier version is repaired, not abandoned.** `initialize()`
+  replaces bodies stored above the ceiling, so transactions captured by 1.0.0 or 1.1.0 become
+  readable again. Their metadata, headers and timings survive; only the oversized body goes.
+- **Stopping the server releases its database watcher.** A stop and start cycle leaked one
+  collector per start.
+
+**Behaviour changes**
+
+- `maxBodySize` above 512 KB has no effect. Android cannot read back a larger row, so the
+  ceiling wins. Use the setting to store less, not more.
+
+**Removed**
+
+- `TransactionRepository.getAllAsFlow()`, replaced by `getLatestAsFlow()`. Unreachable through
+  the public API, since `Aperture.getRepository()` is internal.
 
 ### 1.1.0
 

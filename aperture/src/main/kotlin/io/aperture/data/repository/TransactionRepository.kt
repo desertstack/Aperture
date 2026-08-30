@@ -2,6 +2,7 @@ package io.aperture.data.repository
 
 import io.aperture.data.dao.HttpTransactionDao
 import io.aperture.data.entity.HttpTransaction
+import io.aperture.util.BodyEncoder
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -40,10 +41,27 @@ class TransactionRepository(
     }
 
     /**
-     * Get all transactions as Flow for real-time updates
+     * Get the newest transaction as Flow for real-time updates
      */
-    fun getAllAsFlow(): Flow<List<HttpTransaction>> {
-        return dao.getAllAsFlow()
+    fun getLatestAsFlow(): Flow<HttpTransaction?> {
+        return dao.getLatestAsFlow()
+    }
+
+    /**
+     * Replace stored bodies that Android cannot read back
+     *
+     * Aperture caps a body at BodyEncoder.MAX_STORED_BODY_CHARS on the way in, but a database
+     * written by an earlier version holds rows above the CursorWindow limit. Every query that
+     * selects those rows throws SQLiteBlobTooBigException until the body is gone.
+     *
+     * @return the number of bodies replaced
+     */
+    suspend fun trimOversizedBodies(): Int {
+        val notice = BodyEncoder.OVERSIZED_NOTICE
+        val limit = BodyEncoder.MAX_STORED_BODY_CHARS
+
+        return dao.trimOversizedRequestBodies(limit, notice) +
+                dao.trimOversizedResponseBodies(limit, notice)
     }
 
     /**

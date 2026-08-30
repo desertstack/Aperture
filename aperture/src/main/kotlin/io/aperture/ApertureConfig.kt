@@ -35,6 +35,10 @@ data class ApertureConfig(
     /**
      * Maximum body size to store (in bytes)
      * Bodies larger than this will be truncated
+     *
+     * Aperture stores no more than 512 KB per body whatever this says. Android cannot read back
+     * a row above its CursorWindow limit, so a larger body would make the transaction
+     * unreadable. Use this setting to store less, not more.
      */
     val maxBodySize: Long = 5 * 1024 * 1024, // 5 MB
 

@@ -34,6 +34,8 @@ class ApertureServer(
     // Read from the caller thread by isRunning(), written under the lock by start() and stop().
     @Volatile
     private var server: NettyApplicationEngine? = null
+
+    private var monitoringJob: Job? = null
     private val eventFlow = MutableSharedFlow<ServerEvent>(replay = 0, extraBufferCapacity = 100)
 
     /**
@@ -69,6 +71,8 @@ class ApertureServer(
      */
     @Synchronized
     fun stop() {
+        monitoringJob?.cancel()
+        monitoringJob = null
         server?.stop(1000, 2000)
         server = null
         Log.i(tag, "Server stopped")
@@ -396,15 +400,23 @@ class ApertureServer(
      * Monitor database for changes and emit SSE events
      */
     private fun startEventMonitoring() {
-        CoroutineScope(Dispatchers.IO).launch {
-            repository.getAllAsFlow()
-                .map { it.firstOrNull() }
-                .distinctUntilChanged()
-                .collect { latest ->
-                    latest?.let {
-                        eventFlow.emit(ServerEvent.NewTransaction(it.toDto()))
+        monitoringJob?.cancel()
+        monitoringJob = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                repository.getLatestAsFlow()
+                    .distinctUntilChanged()
+                    .collect { latest ->
+                        latest?.let {
+                            eventFlow.emit(ServerEvent.NewTransaction(it.toDto()))
+                        }
                     }
-                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Nothing here may reach the default handler: this coroutine runs inside the
+                // host app, and an uncaught throw here kills it.
+                Log.e(tag, "Stopped watching the database for new transactions", e)
+            }
         }
     }
 
