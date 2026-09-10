@@ -72,7 +72,24 @@ data class ApertureConfig(
      * Headers to redact from capture (e.g., "Authorization", "Cookie")
      * These headers will be replaced with "[REDACTED]"
      */
-    val headersToRedact: Set<String> = emptySet()
+    val headersToRedact: Set<String> = emptySet(),
+
+    /**
+     * Allow the web console to change app state.
+     *
+     * Reads always work. With this off, every route that writes a preference, a DataStore
+     * value, a database row or a file answers 403 and changes nothing. The console hides its
+     * edit controls to match. Turn it on deliberately: an edit here changes the real app.
+     */
+    val allowWrites: Boolean = false,
+
+    /**
+     * Which domains the web console shows.
+     *
+     * An inspector that is not listed registers no routes, so its data stays on the device.
+     * Use [ApertureInspector.NETWORK_ONLY] to keep the behaviour Aperture had before 1.2.
+     */
+    val inspectors: Set<ApertureInspector> = ApertureInspector.ALL
 ) {
     companion object {
         /**
@@ -96,6 +113,13 @@ data class ApertureConfig(
         val LOCALHOST_ONLY = ApertureConfig(
             localhostOnly = true,
             requireAuth = true
+        )
+
+        /**
+         * Network traffic only, with no access to app storage.
+         */
+        val NETWORK_ONLY = ApertureConfig(
+            inspectors = ApertureInspector.NETWORK_ONLY
         )
     }
 

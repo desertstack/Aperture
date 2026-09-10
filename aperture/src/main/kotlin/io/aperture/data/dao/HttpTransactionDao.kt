@@ -97,6 +97,55 @@ interface HttpTransactionDao {
     suspend fun filterSummariesByStatusCode(statusCode: Int, limit: Int, offset: Int): List<TransactionSummary>
 
     /**
+     * List transaction summaries under every filter at once (FR-DB-008, FR-DB-009, FR-DB-010)
+     *
+     * One query, not three. The older single-filter queries answered only the last filter the
+     * caller set, so choosing a method silently dropped the search text.
+     *
+     * A null argument means "do not filter on this". The column list is deliberate, for the
+     * reason given on [getAllSummaries].
+     */
+    @Query("""
+        SELECT id, request_date, method, url, host, path, scheme, protocol,
+        request_content_type, request_content_length, request_body_is_plain_text,
+        response_date, response_code, response_message, response_content_type,
+        response_content_length, response_body_is_plain_text, duration, error,
+        request_payload_size, response_payload_size, is_gzip_encoded, is_mocked,
+        mock_enabled, mock_response_code
+        FROM http_transactions
+        WHERE (:search IS NULL OR url LIKE '%' || :search || '%')
+          AND (:method IS NULL OR method = :method)
+          AND (:minStatus IS NULL OR (response_code IS NOT NULL
+               AND response_code >= :minStatus AND response_code <= :maxStatus))
+        ORDER BY request_date DESC LIMIT :limit OFFSET :offset
+    """)
+    suspend fun filterSummaries(
+        search: String?,
+        method: String?,
+        minStatus: Int?,
+        maxStatus: Int?,
+        limit: Int,
+        offset: Int
+    ): List<TransactionSummary>
+
+    /**
+     * Count the rows [filterSummaries] would return, so the list can page through them.
+     */
+    @Query("""
+        SELECT COUNT(*) FROM http_transactions
+        WHERE (:search IS NULL OR url LIKE '%' || :search || '%')
+          AND (:method IS NULL OR method = :method)
+          AND (:minStatus IS NULL OR (response_code IS NOT NULL
+               AND response_code >= :minStatus AND response_code <= :maxStatus))
+    """)
+    suspend fun countFiltered(
+        search: String?,
+        method: String?,
+        minStatus: Int?,
+        maxStatus: Int?
+    ): Int
+
+    /**
      * Get the newest transaction summary as Flow for real-time updates (FR-DB-013)
      *
      * Deliberately one row. Selecting the whole table on every insert loads every stored body

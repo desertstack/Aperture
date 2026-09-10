@@ -4,6 +4,7 @@ import io.aperture.data.dao.HttpTransactionDao
 import io.aperture.data.entity.HttpTransaction
 import io.aperture.data.entity.TransactionSummary
 import io.aperture.util.BodyEncoder
+import io.aperture.util.StatusFilter
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -53,6 +54,38 @@ class TransactionRepository(
      */
     suspend fun getSummaries(limit: Int = 50, offset: Int = 0): List<TransactionSummary> {
         return dao.getAllSummaries(limit, offset)
+    }
+
+    /**
+     * One page of the list view, under every filter the console set.
+     *
+     * All three filters apply together. Passing null for one leaves it out.
+     *
+     * @param statusClass a class such as "4xx", or an exact code such as "404"
+     */
+    suspend fun getSummaries(
+        limit: Int,
+        offset: Int,
+        search: String?,
+        method: String?,
+        statusClass: String?
+    ): SummaryPage {
+        val status = StatusFilter.parse(statusClass)
+        val items = dao.filterSummaries(
+            search = search,
+            method = method,
+            minStatus = status?.first,
+            maxStatus = status?.last,
+            limit = limit,
+            offset = offset
+        )
+        val total = dao.countFiltered(
+            search = search,
+            method = method,
+            minStatus = status?.first,
+            maxStatus = status?.last
+        )
+        return SummaryPage(items, total)
     }
 
     /**
@@ -242,4 +275,12 @@ data class TransactionStats(
     val mockedTransactions: Int,
     val failedTransactions: Int,
     val averageDuration: Long
+)
+
+/**
+ * One page of list rows, with the number of rows the same filters match overall.
+ */
+data class SummaryPage(
+    val items: List<TransactionSummary>,
+    val total: Int
 )

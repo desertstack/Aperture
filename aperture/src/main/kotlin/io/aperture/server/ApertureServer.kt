@@ -2,32 +2,41 @@ package io.aperture.server
 
 import android.util.Log
 import io.aperture.ApertureConfig
-import io.aperture.data.repository.TransactionRepository
-import io.aperture.server.dto.*
-import io.aperture.util.HeadersSerializer
+import io.aperture.inspect.InspectorModule
+import io.aperture.server.dto.CapabilitiesResponse
+import io.aperture.server.dto.ErrorResponse
+import io.aperture.server.dto.InspectorDto
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.pipeline.PipelineContext
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
+import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Ktor-based web server for Aperture
- * Implements FR-WEB-001 through FR-WEB-014
+ * The web console: an embedded Ktor server that answers on the device.
+ *
+ * The server owns the plumbing every inspector shares — plugins, authentication, the live
+ * event stream, the static console — and nothing about any one domain. Each domain arrives as
+ * an [InspectorModule] and hangs its own routes under `/api/{id}`.
  */
-class ApertureServer(
+class ApertureServer internal constructor(
     private val context: android.content.Context,
-    private val repository: TransactionRepository,
     private val config: ApertureConfig,
-    private val authToken: String?
+    private val authToken: String?,
+    private val bus: ApertureBus,
+    private val modules: List<InspectorModule>
 ) {
     private val tag = "ApertureServer"
 
@@ -35,8 +44,19 @@ class ApertureServer(
     @Volatile
     private var server: NettyApplicationEngine? = null
 
-    private var monitoringJob: Job? = null
-    private val eventFlow = MutableSharedFlow<ServerEvent>(replay = 0, extraBufferCapacity = 100)
+    /** Assets are read from the APK once and kept, not re-read per request. */
+    private val assetCache = ConcurrentHashMap<String, CachedAsset>()
+
+    private val activeModules: List<InspectorModule> by lazy {
+        modules.filter {
+            try {
+                it.isAvailable()
+            } catch (e: Exception) {
+                Log.w(tag, "Inspector '${it.id}' is unavailable", e)
+                false
+            }
+        }
+    }
 
     /**
      * Start the web server (FR-WEB-002)
@@ -58,8 +78,13 @@ class ApertureServer(
             configureServer()
         }.start(wait = false)
 
-        // Start monitoring for real-time updates
-        startEventMonitoring()
+        for (module in activeModules) {
+            try {
+                module.start()
+            } catch (e: Exception) {
+                Log.e(tag, "Inspector '${module.id}' failed to start", e)
+            }
+        }
 
         Log.i(tag, "Server started on $host:${config.port}")
     }
@@ -71,8 +96,13 @@ class ApertureServer(
      */
     @Synchronized
     fun stop() {
-        monitoringJob?.cancel()
-        monitoringJob = null
+        for (module in activeModules) {
+            try {
+                module.stop()
+            } catch (e: Exception) {
+                Log.e(tag, "Inspector '${module.id}' failed to stop", e)
+            }
+        }
         server?.stop(1000, 2000)
         server = null
         Log.i(tag, "Server stopped")
@@ -88,19 +118,62 @@ class ApertureServer(
     /**
      * Configure Ktor application
      */
-    private fun Application.configureServer() {
-        // Install plugins
+    internal fun Application.configureServer() {
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true
                 isLenient = true
                 ignoreUnknownKeys = true
+                // Send every field, default or not. Otherwise a false flag arrives as a
+                // missing key and the console has to guess what its absence meant.
+                encodeDefaults = true
             })
         }
 
-        // CORS support (FR-WEB-007)
+        // Nothing here may reach Ktor's default handler. Reading preferences, files and host
+        // databases throws far more readily than a Room query does, and a bodyless 500 tells
+        // the console nothing.
+        install(StatusPages) {
+            exception<TimeoutCancellationException> { call, _ ->
+                call.respond(
+                    HttpStatusCode.GatewayTimeout,
+                    ErrorResponse("Timeout", "The device took too long to answer that request.")
+                )
+            }
+            exception<Throwable> { call, cause ->
+                Log.w(tag, "Request failed: ${call.request.path()}", cause)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(
+                        error = cause::class.java.simpleName,
+                        message = cause.message ?: "The device could not answer that request."
+                    )
+                )
+            }
+        }
+
+        // The console is 44 KB of text before this feature and more after it. Over ADB or WiFi
+        // that is worth compressing.
+        install(Compression) {
+            gzip { priority = 1.0 }
+            deflate { priority = 0.9 }
+            minimumSize(512)
+            // Server-Sent Events must not be buffered into compression blocks.
+            matchContentType(
+                ContentType.Text.Html,
+                ContentType.Text.CSS,
+                ContentType.Text.Plain,
+                ContentType.Application.JavaScript,
+                ContentType.Application.Json,
+                ContentType.Image.SVG
+            )
+        }
+
+        // Same-origin only. The console is served by this server, so it never needs a
+        // cross-origin grant. `anyHost()` used to publish captured traffic to any page the
+        // developer happened to have open; over app databases that is worse.
         install(CORS) {
-            anyHost()
+            allowOrigins { origin -> isLoopbackOrigin(origin) }
             allowHeader(HttpHeaders.ContentType)
             allowHeader(HttpHeaders.Authorization)
             allowMethod(HttpMethod.Get)
@@ -112,281 +185,98 @@ class ApertureServer(
 
         // Note: SSE support is built into ktor-server-core, no plugin needed
 
-        // Routing
         routing {
-            // Authentication interceptor
-            if (authToken != null) {
-                intercept(ApplicationCallPipeline.Call) {
-                    val path = call.request.path()
-                    if (!path.startsWith("/api")) {
-                        // Allow UI access without auth
-                        return@intercept
-                    }
+            intercept(ApplicationCallPipeline.Call) {
+                val path = call.request.path()
+                if (!path.startsWith("/api")) return@intercept
 
-                    val token = call.request.header("Authorization")?.removePrefix("Bearer ")
-                    if (token != authToken) {
-                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse(
+                // A browser resolves an attacker's domain to this device's address, then reads
+                // the response. Requiring a literal address, or localhost, defeats that: an
+                // attacker cannot put an IP literal in a domain name they control.
+                if (!isAllowedHost(call.request.host())) {
+                    call.respond(
+                        HttpStatusCode.Forbidden,
+                        ErrorResponse(
+                            error = "Forbidden",
+                            message = "Reach Aperture by IP address or localhost, not by host name."
+                        )
+                    )
+                    finish()
+                    return@intercept
+                }
+
+                if (authToken != null && !call.hasValidToken()) {
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        ErrorResponse(
                             error = "Unauthorized",
                             message = "Invalid or missing authentication token"
-                        ))
-                        finish()
-                    }
+                        )
+                    )
+                    finish()
                 }
             }
 
-            // Serve main HTML page
             get("/") {
-                call.respondText(getWebUI(), ContentType.Text.Html)
+                respondAsset(INDEX_ASSET, ContentType.Text.Html)
             }
 
-            // API routes
+            // The console's own files. Mounted under /ui so no tailcard ever competes with /api.
+            get("/ui/{path...}") {
+                val requested = call.parameters.getAll("path").orEmpty().joinToString("/")
+                if (requested.isEmpty() || requested.contains("..")) {
+                    call.respond(HttpStatusCode.NotFound)
+                    return@get
+                }
+                respondAsset("$UI_ASSET_ROOT/$requested", contentTypeFor(requested))
+            }
+
             route("/api") {
-                configureTransactionRoutes()
-                configureStatsRoutes()
+                get("/capabilities") { call.respond(capabilities()) }
+
                 configureSSERoutes()
+
+                for (module in activeModules) {
+                    route("/${module.id}") { module.register(this) }
+                }
             }
         }
     }
 
     /**
-     * Configure transaction-related routes
-     */
-    private fun Route.configureTransactionRoutes() {
-        route("/transactions") {
-            // GET /api/transactions - Get all transactions with filters
-            get {
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50
-                val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
-                val search = call.request.queryParameters["search"]
-                val method = call.request.queryParameters["method"]
-                val status = call.request.queryParameters["status"]?.toIntOrNull()
-
-                // Summaries, not whole transactions. The list shows no bodies, and loading
-                // up to 500 of them would hold hundreds of megabytes in the host app.
-                val transactions = when {
-                    search != null -> repository.searchSummariesByUrl(search, limit.coerceAtMost(500), offset)
-                    method != null -> repository.filterSummariesByMethod(method, limit.coerceAtMost(500), offset)
-                    status != null -> repository.filterSummariesByStatusCode(status, limit.coerceAtMost(500), offset)
-                    else -> repository.getSummaries(limit.coerceAtMost(500), offset)
-                }
-
-                val total = repository.getCount()
-
-                call.respond(TransactionListResponse(
-                    transactions = transactions.map { it.toDto() },
-                    total = total,
-                    limit = limit,
-                    offset = offset
-                ))
-            }
-
-            // GET /api/transactions/{id} - Get single transaction
-            get("/{id}") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid transaction ID"
-                    ))
-                    return@get
-                }
-
-                val transaction = repository.getById(id)
-                if (transaction == null) {
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(
-                        error = "Not Found",
-                        message = "Transaction not found"
-                    ))
-                    return@get
-                }
-
-                call.respond(transaction.toDto())
-            }
-
-            // PUT /api/transactions/{id}/mock - Enable/disable mock
-            put("/{id}/mock") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid transaction ID"
-                    ))
-                    return@put
-                }
-
-                val request = call.receive<UpdateMockStatusRequest>()
-                repository.setMockEnabled(id, request.enabled)
-
-                val updated = repository.getById(id)
-                if (updated == null) {
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(
-                        error = "Not Found",
-                        message = "Transaction not found"
-                    ))
-                    return@put
-                }
-
-                eventFlow.emit(ServerEvent.TransactionUpdated(updated.toDto()))
-                call.respond(updated.toDto())
-            }
-
-            // PUT /api/transactions/{id}/response - Update mock response
-            put("/{id}/response") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid transaction ID"
-                    ))
-                    return@put
-                }
-
-                val request = call.receive<UpdateMockResponseRequest>()
-
-                // Validate status code
-                if (request.statusCode !in 100..599) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid status code"
-                    ))
-                    return@put
-                }
-
-                // Serialize headers
-                val headersJson = request.headers?.let {
-                    HeadersSerializer.serializeMap(it)
-                }
-
-                repository.updateMockResponse(
-                    id = id,
-                    responseCode = request.statusCode,
-                    headers = headersJson,
-                    body = request.body
-                )
-
-                val updated = repository.getById(id)
-                if (updated == null) {
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(
-                        error = "Not Found",
-                        message = "Transaction not found"
-                    ))
-                    return@put
-                }
-
-                eventFlow.emit(ServerEvent.TransactionUpdated(updated.toDto()))
-                call.respond(updated.toDto())
-            }
-
-            // DELETE /api/transactions/{id}/mock - Clear mock configuration
-            delete("/{id}/mock") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid transaction ID"
-                    ))
-                    return@delete
-                }
-
-                repository.clearMock(id)
-
-                val updated = repository.getById(id)
-                if (updated == null) {
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(
-                        error = "Not Found",
-                        message = "Transaction not found"
-                    ))
-                    return@delete
-                }
-
-                eventFlow.emit(ServerEvent.TransactionUpdated(updated.toDto()))
-                call.respond(updated.toDto())
-            }
-
-            // DELETE /api/transactions/{id} - Delete single transaction
-            delete("/{id}") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(
-                        error = "Bad Request",
-                        message = "Invalid transaction ID"
-                    ))
-                    return@delete
-                }
-
-                repository.deleteById(id)
-                eventFlow.emit(ServerEvent.TransactionDeleted(id))
-                call.respond(HttpStatusCode.NoContent)
-            }
-
-            // DELETE /api/transactions - Delete all transactions
-            delete {
-                repository.deleteAll()
-                eventFlow.emit(ServerEvent.AllTransactionsDeleted)
-                call.respond(HttpStatusCode.NoContent)
-            }
-        }
-    }
-
-    /**
-     * Configure stats route
-     */
-    private fun Route.configureStatsRoutes() {
-        get("/stats") {
-            val stats = repository.getStats()
-            call.respond(StatsResponse(
-                totalTransactions = stats.totalTransactions,
-                mockedTransactions = stats.mockedTransactions,
-                failedTransactions = stats.failedTransactions,
-                averageDuration = stats.averageDuration
-            ))
-        }
-    }
-
-    /**
-     * Configure Server-Sent Events route for real-time updates
-     * Implements SSE manually using Ktor's respondTextWriter
+     * Live events, as one stream the whole console shares.
+     *
+     * A panel asks for the channels it draws with `?channels=network,prefs`. Without the
+     * parameter it sees everything, which is what the older console expects.
      */
     private fun Route.configureSSERoutes() {
         get("/stream") {
-            // Set SSE headers
-            call.response.cacheControl(io.ktor.http.CacheControl.NoCache(null))
+            val wanted = call.request.queryParameters["channels"]
+                ?.split(',')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.toSet()
+                ?.takeIf { it.isNotEmpty() }
+
+            call.response.cacheControl(CacheControl.NoCache(null))
             call.response.header("Content-Type", "text/event-stream")
             call.response.header("Connection", "keep-alive")
             call.response.header("X-Accel-Buffering", "no") // Disable nginx buffering
 
             try {
                 call.respondTextWriter(contentType = ContentType.Text.EventStream) {
-                    // Send initial connection established message
                     write("event: connected\n")
                     write("data: {\"status\":\"connected\"}\n\n")
                     flush()
 
-                    // Collect events from the flow and send to client
-                    eventFlow.collect { event ->
+                    bus.events.collect { event ->
+                        if (wanted != null && event.channel !in wanted) return@collect
                         try {
-                            when (event) {
-                                is ServerEvent.NewTransaction -> {
-                                    write("event: new_transaction\n")
-                                    write("data: ${Json.encodeToString(TransactionSummaryDto.serializer(), event.transaction)}\n\n")
-                                }
-                                is ServerEvent.TransactionUpdated -> {
-                                    write("event: updated_transaction\n")
-                                    write("data: ${Json.encodeToString(TransactionDto.serializer(), event.transaction)}\n\n")
-                                }
-                                is ServerEvent.TransactionDeleted -> {
-                                    write("event: deleted_transaction\n")
-                                    write("data: {\"id\": ${event.id}}\n\n")
-                                }
-                                is ServerEvent.AllTransactionsDeleted -> {
-                                    write("event: all_deleted\n")
-                                    write("data: {}\n\n")
-                                }
-                            }
+                            write("event: ${event.type}\n")
+                            write("data: ${event.json}\n\n")
                             flush()
                         } catch (e: Exception) {
-                            Log.e(tag, "Error sending SSE event", e)
-                            // Client likely disconnected
+                            Log.d(tag, "SSE write failed, client gone", e)
                             throw e
                         }
                     }
@@ -398,44 +288,105 @@ class ApertureServer(
         }
     }
 
-    /**
-     * Monitor database for changes and emit SSE events
-     */
-    private fun startEventMonitoring() {
-        monitoringJob?.cancel()
-        monitoringJob = CoroutineScope(Dispatchers.IO).launch {
-            try {
-                repository.getLatestSummaryAsFlow()
-                    .distinctUntilChanged()
-                    .collect { latest ->
-                        latest?.let {
-                            eventFlow.emit(ServerEvent.NewTransaction(it.toDto()))
-                        }
-                    }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Nothing here may reach the default handler: this coroutine runs inside the
-                // host app, and an uncaught throw here kills it.
-                Log.e(tag, "Stopped watching the database for new transactions", e)
+    private fun capabilities(): CapabilitiesResponse {
+        val packageName = context.packageName
+        val appVersion = try {
+            @Suppress("DEPRECATION")
+            val info = context.packageManager.getPackageInfo(packageName, 0)
+            val code = if (android.os.Build.VERSION.SDK_INT >= 28) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
             }
+            "${info.versionName} ($code)"
+        } catch (e: Exception) {
+            "unknown"
         }
+
+        return CapabilitiesResponse(
+            apertureVersion = APERTURE_VERSION,
+            appId = packageName,
+            appVersion = appVersion,
+            device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+            androidApi = android.os.Build.VERSION.SDK_INT,
+            sqliteVersion = sqliteVersion(),
+            allowWrites = config.allowWrites,
+            requireAuth = config.requireAuth,
+            exposedOnNetwork = !config.localhostOnly && !config.requireAuth,
+            inspectors = activeModules.map {
+                InspectorDto(
+                    id = it.id,
+                    label = it.label,
+                    icon = it.icon,
+                    writable = it.writable && config.allowWrites
+                )
+            }
+        )
     }
 
     /**
-     * Get the embedded web UI HTML from assets
+     * Which SQLite this device ships. Feature availability in the database inspector turns on
+     * it, and it varies from 3.8.6 on API 21 to 3.44 and up on recent releases.
      */
-    private fun getWebUI(): String {
-        return try {
-            // Load from assets using Android AssetManager
-            context.assets.open("index.html").use { inputStream ->
-                inputStream.bufferedReader().use { reader ->
-                    reader.readText()
-                }
+    private fun sqliteVersion(): String = try {
+        android.database.sqlite.SQLiteDatabase.create(null).use { db ->
+            db.rawQuery("SELECT sqlite_version()", null).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else "unknown"
             }
+        }
+    } catch (e: Exception) {
+        "unknown"
+    }
+
+    private fun ApplicationCall.hasValidToken(): Boolean {
+        val expected = authToken ?: return true
+        // EventSource cannot set a header, so the stream accepts the token as a parameter too.
+        val presented = request.header(HttpHeaders.Authorization)?.removePrefix("Bearer ")?.trim()
+            ?: request.queryParameters["token"]
+            ?: return false
+        return MessageDigest.isEqual(
+            presented.toByteArray(Charsets.UTF_8),
+            expected.toByteArray(Charsets.UTF_8)
+        )
+    }
+
+    private suspend fun PipelineContext<Unit, ApplicationCall>.respondAsset(
+        path: String,
+        contentType: ContentType
+    ) {
+        val asset = loadAsset(path)
+        if (asset == null) {
+            if (path == INDEX_ASSET) {
+                call.respondText(getBasicUI(), ContentType.Text.Html)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+            return
+        }
+
+        if (call.request.header(HttpHeaders.IfNoneMatch)?.trim('"') == asset.etag) {
+            call.respond(HttpStatusCode.NotModified)
+            return
+        }
+
+        call.response.header(HttpHeaders.ETag, "\"${asset.etag}\"")
+        call.response.header(HttpHeaders.CacheControl, "no-cache")
+        call.respondBytes(asset.bytes, contentType)
+    }
+
+    private fun loadAsset(path: String): CachedAsset? {
+        assetCache[path]?.let { return it }
+        return try {
+            val bytes = context.assets.open(path).use { it.readBytes() }
+            val etag = MessageDigest.getInstance("SHA-1")
+                .digest(bytes)
+                .take(10)
+                .joinToString("") { "%02x".format(it) }
+            CachedAsset(bytes, etag).also { assetCache[path] = it }
         } catch (e: Exception) {
-            Log.e(tag, "Failed to load web UI from assets", e)
-            getBasicUI()
+            Log.w(tag, "Asset not found: $path")
+            null
         }
     }
 
@@ -444,7 +395,7 @@ class ApertureServer(
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Aperture - Network Inspector</title>
+                <title>Aperture</title>
                 <style>
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -458,22 +409,74 @@ class ApertureServer(
                 </style>
             </head>
             <body>
-                <h1>⚠️ Aperture Network Inspector</h1>
-                <p class="error">Web UI could not be loaded from assets.</p>
-                <p class="info">Check Logcat for details. The assets/index.html file may be missing.</p>
-                <p class="info">API endpoints are still available at /api/transactions</p>
+                <h1>Aperture</h1>
+                <p class="error">The console could not be loaded from the app's assets.</p>
+                <p class="info">Check Logcat for details.</p>
+                <p class="info">The API is still available at /api/capabilities</p>
             </body>
             </html>
         """.trimIndent()
     }
-}
 
-/**
- * Server-Sent Events types
- */
-sealed class ServerEvent {
-    data class NewTransaction(val transaction: TransactionSummaryDto) : ServerEvent()
-    data class TransactionUpdated(val transaction: TransactionDto) : ServerEvent()
-    data class TransactionDeleted(val id: Long) : ServerEvent()
-    object AllTransactionsDeleted : ServerEvent()
+    private class CachedAsset(val bytes: ByteArray, val etag: String)
+
+    companion object {
+        internal const val APERTURE_VERSION = "1.2.0"
+        private const val UI_ASSET_ROOT = "ui"
+        private const val INDEX_ASSET = "ui/index.html"
+
+        /**
+         * Whether a Host header may reach the API.
+         *
+         * Loopback names and bare addresses pass. A registered domain does not, because that
+         * is the only thing a rebinding attacker can point at this device.
+         */
+        internal fun isAllowedHost(host: String): Boolean {
+            var name = host.trim().lowercase()
+            if (name.startsWith("[")) {
+                // Bracketed IPv6, as in [::1]:8080
+                val end = name.indexOf(']')
+                if (end < 0) return false
+                name = name.substring(1, end)
+            } else if (name.count { it == ':' } == 1) {
+                // A single colon is a port. More than one means a bare IPv6 address.
+                name = name.substringBefore(':')
+            }
+            if (name.isEmpty()) return false
+            if (name == "localhost" || name == "::1") return true
+            return isIpLiteral(name)
+        }
+
+        private fun isIpLiteral(name: String): Boolean {
+            if (name.contains(':')) {
+                // IPv6: hex groups and separators only, never a letter outside a-f.
+                return name.all { it.isDigit() || it in "abcdef:." }
+            }
+            val parts = name.split('.')
+            if (parts.size != 4) return false
+            return parts.all { part ->
+                part.isNotEmpty() && part.length <= 3 && part.all { it.isDigit() } &&
+                    part.toInt() in 0..255
+            }
+        }
+
+        /** Cross-origin calls are allowed from a developer's own machine and nowhere else. */
+        internal fun isLoopbackOrigin(origin: String): Boolean {
+            val withoutScheme = origin.substringAfter("://", origin)
+            return isAllowedHost(withoutScheme)
+        }
+
+        internal fun contentTypeFor(path: String): ContentType = when (path.substringAfterLast('.', "")) {
+            "html" -> ContentType.Text.Html
+            "css" -> ContentType.Text.CSS
+            "js", "mjs" -> ContentType.Application.JavaScript
+            "json" -> ContentType.Application.Json
+            "svg" -> ContentType.Image.SVG
+            "png" -> ContentType.Image.PNG
+            "ico" -> ContentType("image", "x-icon")
+            "woff2" -> ContentType("font", "woff2")
+            "map" -> ContentType.Application.Json
+            else -> ContentType.Text.Plain
+        }
+    }
 }

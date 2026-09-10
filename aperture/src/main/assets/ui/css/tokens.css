@@ -1,0 +1,160 @@
+/*
+ * Aperture design tokens.
+ *
+ * Warm paper, warm ink, one accent. Colour carries meaning here and nothing else: if a thing
+ * is not a status, it is grey. Every token is declared on bare :root first, then redefined for
+ * the system dark setting and again for the explicit toggle, so neither can strand the other.
+ */
+
+:root {
+    /* Surfaces, from the page up */
+    --paper-0: #FCFCFA;
+    --paper-1: #FFFFFF;
+    --paper-2: #F5F4F1;
+    --paper-3: #EDEBE6;
+
+    /* Hairlines. There are no cards and no shadows, so these do all the separating. */
+    --line: #E4E2DD;
+    --line-strong: #CFCCC5;
+
+    /* Ink, from primary to the faintest label */
+    --ink-0: #1B1A17;
+    --ink-1: #5A5852;
+    --ink-2: #8A877F;
+
+    /* The one accent */
+    --accent: #0F6E5C;
+    --accent-hover: #0B5748;
+    --accent-soft: #E6F1EE;
+    --accent-ink: #FFFFFF;
+
+    /* Status. Used on text and 6px dots, never as a filled background. */
+    --ok: #2F7D4F;
+    --info: #2E6BB8;
+    --warn: #B8730F;
+    --err: #C0392B;
+    --mock: #7A5AC7;
+
+    --ok-soft: #E8F2EB;
+    --warn-soft: #FBF1E2;
+    --err-soft: #FBEAE8;
+    --mock-soft: #F0EBFA;
+
+    --selection: #DCEDE8;
+
+    /* Type. No webfont: nothing is fetched, so the console works with no network at all. */
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+        Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo,
+        Consolas, "Liberation Mono", monospace;
+
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-md: 13px;
+    --fs-lg: 15px;
+    --fs-xl: 20px;
+
+    --lh-tight: 1.3;
+    --lh-body: 1.55;
+
+    /* Space, on a 4px base */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 24px;
+    --sp-6: 32px;
+
+    /* Form */
+    --r-sm: 5px;
+    --r-md: 7px;
+    --rail-w: 52px;
+    --rail-w-open: 184px;
+    --topbar-h: 40px;
+    --row-h: 46px;
+    --row-pad: var(--sp-3);
+
+    /* Motion */
+    --dur: 140ms;
+    --ease: cubic-bezier(0.2, 0.6, 0.3, 1);
+
+    /* Overlays are the only things that cast a shadow */
+    --shadow-overlay: 0 12px 32px rgba(20, 18, 14, 0.16), 0 2px 6px rgba(20, 18, 14, 0.08);
+
+    color-scheme: light dark;
+}
+
+:root[data-density="compact"] {
+    --row-h: 36px;
+    --row-pad: var(--sp-2);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --paper-0: #141412;
+        --paper-1: #1C1C19;
+        --paper-2: #242420;
+        --paper-3: #2C2C27;
+
+        --line: #2E2E29;
+        --line-strong: #3C3B35;
+
+        --ink-0: #E8E6E1;
+        --ink-1: #A5A199;
+        --ink-2: #737069;
+
+        --accent: #4FBFA4;
+        --accent-hover: #66CDB4;
+        --accent-soft: #12302A;
+        --accent-ink: #0B1D19;
+
+        --ok: #58B87C;
+        --info: #6BA3E0;
+        --warn: #D9973A;
+        --err: #E0685C;
+        --mock: #A78BE8;
+
+        --ok-soft: #16281D;
+        --warn-soft: #2C2114;
+        --err-soft: #2E1A18;
+        --mock-soft: #221C33;
+
+        --selection: #1B3A34;
+
+        --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+}
+
+:root[data-theme="dark"] {
+    --paper-0: #141412;
+    --paper-1: #1C1C19;
+    --paper-2: #242420;
+    --paper-3: #2C2C27;
+
+    --line: #2E2E29;
+    --line-strong: #3C3B35;
+
+    --ink-0: #E8E6E1;
+    --ink-1: #A5A199;
+    --ink-2: #737069;
+
+    --accent: #4FBFA4;
+    --accent-hover: #66CDB4;
+    --accent-soft: #12302A;
+    --accent-ink: #0B1D19;
+
+    --ok: #58B87C;
+    --info: #6BA3E0;
+    --warn: #D9973A;
+    --err: #E0685C;
+    --mock: #A78BE8;
+
+    --ok-soft: #16281D;
+    --warn-soft: #2C2114;
+    --err-soft: #2E1A18;
+    --mock-soft: #221C33;
+
+    --selection: #1B3A34;
+
+    --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+}

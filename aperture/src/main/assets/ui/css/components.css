@@ -1,0 +1,652 @@
+/* Shared pieces: controls, list rows, tables, code, overlays. */
+
+/* ---------- Buttons ---------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
+    background: var(--paper-1);
+    color: var(--ink-0);
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.btn:hover {
+    background: var(--paper-2);
+    border-color: var(--ink-2);
+}
+
+.btn:active {
+    background: var(--paper-3);
+}
+
+.btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 550;
+}
+
+.btn--primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.btn--danger {
+    color: var(--err);
+    border-color: var(--line-strong);
+}
+
+.btn--danger:hover {
+    background: var(--err-soft);
+    border-color: var(--err);
+}
+
+.btn--quiet {
+    border-color: transparent;
+    background: transparent;
+    color: var(--ink-1);
+}
+
+.btn--quiet:hover {
+    background: var(--paper-2);
+    border-color: transparent;
+    color: var(--ink-0);
+}
+
+.btn--icon {
+    width: 28px;
+    padding: 0;
+}
+
+.btn--sm {
+    height: 24px;
+    padding: 0 8px;
+    font-size: var(--fs-xs);
+}
+
+/* ---------- Inputs ---------- */
+
+.input,
+.select {
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
+    background: var(--paper-1);
+    color: var(--ink-0);
+    font-family: var(--font-ui);
+    font-size: var(--fs-sm);
+    width: 100%;
+    min-width: 0;
+}
+
+.input.mono {
+    font-family: var(--font-mono);
+}
+
+.input::placeholder {
+    color: var(--ink-2);
+}
+
+.input:focus-visible,
+.select:focus-visible {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.select {
+    cursor: pointer;
+    appearance: none;
+    padding-right: 22px;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 12px) 12px, calc(100% - 8px) 12px;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+}
+
+.textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--sp-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
+    background: var(--paper-1);
+    color: var(--ink-0);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.textarea:focus-visible {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search svg {
+    position: absolute;
+    left: 8px;
+    color: var(--ink-2);
+    pointer-events: none;
+}
+
+.search .input {
+    padding-left: 28px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: var(--sp-3);
+}
+
+.field__label {
+    font-size: var(--fs-xs);
+    color: var(--ink-1);
+}
+
+/* ---------- Chips and dots ---------- */
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 3px;
+    font-size: var(--fs-xs);
+    font-weight: 550;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.chip--warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.chip--mock {
+    background: var(--mock-soft);
+    color: var(--mock);
+}
+
+.chip--quiet {
+    background: var(--paper-2);
+    color: var(--ink-1);
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--ink-2);
+}
+
+.dot--ok { background: var(--ok); }
+.dot--info { background: var(--info); }
+.dot--warn { background: var(--warn); }
+.dot--err { background: var(--err); }
+.dot--mock { background: var(--mock); }
+
+.t-ok { color: var(--ok); }
+.t-info { color: var(--info); }
+.t-warn { color: var(--warn); }
+.t-err { color: var(--err); }
+.t-mock { color: var(--mock); }
+
+/* ---------- List rows ---------- */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    min-height: var(--row-h);
+    padding: var(--sp-2) var(--row-pad);
+    border-bottom: 1px solid var(--line);
+    border-left: 2px solid transparent;
+    background: transparent;
+    transition: background var(--dur) var(--ease);
+}
+
+.row:hover {
+    background: var(--paper-2);
+}
+
+.row[aria-selected="true"] {
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+}
+
+.row__top {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+}
+
+.row__title {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-0);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    direction: rtl;
+    text-align: left;
+}
+
+.row__method {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--ink-1);
+    width: 42px;
+    flex-shrink: 0;
+}
+
+.row__status {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+    width: 26px;
+    flex-shrink: 0;
+}
+
+.row__sub {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-top: 3px;
+    padding-left: 68px;
+    font-size: var(--fs-xs);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+}
+
+:root[data-density="compact"] .row__sub {
+    display: none;
+}
+
+/* A row that has just arrived is marked for a moment, not animated at length. */
+@keyframes row-arrive {
+    from { background: var(--accent-soft); }
+    to { background: transparent; }
+}
+
+.row--new {
+    animation: row-arrive 1.2s var(--ease);
+}
+
+/* ---------- Key/value grid ---------- */
+
+.kv {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) 1fr;
+    gap: 1px var(--sp-4);
+}
+
+.kv__k {
+    font-size: var(--fs-sm);
+    color: var(--ink-1);
+    padding: 5px 0;
+}
+
+.kv__v {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+    padding: 5px 0;
+    word-break: break-all;
+}
+
+/* ---------- Table ---------- */
+
+.table-wrap {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: auto;
+    background: var(--paper-1);
+    max-height: 62vh;
+}
+
+table.data {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    font-size: var(--fs-sm);
+}
+
+table.data th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--paper-2);
+    text-align: left;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    padding: 7px var(--sp-3);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+table.data td {
+    padding: 6px var(--sp-3);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    vertical-align: top;
+    max-width: 380px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.data tr:last-child td {
+    border-bottom: none;
+}
+
+table.data tbody tr:hover td {
+    background: var(--paper-2);
+}
+
+/* A cell with more to show keeps its button visible; the text does the truncating. */
+table.data td.has-more {
+    overflow: visible;
+    max-width: none;
+    white-space: nowrap;
+}
+
+table.data td.has-more > .truncate {
+    display: inline-block;
+    max-width: 320px;
+    vertical-align: bottom;
+}
+
+/* A cell being edited holds a form, so it wraps and takes the width it needs. */
+table.data td.editing {
+    white-space: normal;
+    max-width: none;
+    padding-bottom: var(--sp-3);
+}
+
+td.null,
+.null {
+    color: var(--ink-2);
+    font-style: italic;
+}
+
+/* ---------- Code ---------- */
+
+.code {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.code--empty {
+    color: var(--ink-2);
+    font-style: italic;
+    white-space: normal;
+}
+
+/* ---------- Empty and loading ---------- */
+
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: var(--sp-6) var(--sp-4);
+    text-align: center;
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
+}
+
+.empty__title {
+    color: var(--ink-1);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.7; }
+}
+
+.skeleton {
+    height: 10px;
+    border-radius: 3px;
+    background: var(--line);
+    animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* ---------- Banner ---------- */
+
+.banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--warn);
+    border-radius: var(--r-sm);
+    background: var(--warn-soft);
+    color: var(--ink-0);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--sp-4);
+}
+
+.banner svg {
+    color: var(--warn);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ---------- Dialog ---------- */
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 18, 14, 0.32);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-4);
+    z-index: 100;
+}
+
+.dialog {
+    width: min(520px, 100%);
+    background: var(--paper-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-overlay);
+    padding: var(--sp-4);
+}
+
+.dialog__title {
+    font-size: var(--fs-lg);
+    font-weight: 600;
+    margin-bottom: var(--sp-2);
+}
+
+.dialog__body {
+    font-size: var(--fs-md);
+    color: var(--ink-1);
+    margin-bottom: var(--sp-4);
+}
+
+.dialog__target {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-0);
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: var(--sp-2);
+    margin-top: var(--sp-2);
+    word-break: break-all;
+}
+
+.dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+}
+
+/* ---------- Toast ---------- */
+
+.toasts {
+    position: fixed;
+    bottom: var(--sp-4);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    z-index: 200;
+    pointer-events: none;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--paper-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-overlay);
+    font-size: var(--fs-sm);
+    pointer-events: auto;
+    animation: toast-in var(--dur) var(--ease);
+}
+
+.toast--err {
+    border-left: 2px solid var(--err);
+}
+
+.toast--ok {
+    border-left: 2px solid var(--ok);
+}
+
+/* ---------- Command palette ---------- */
+
+.palette {
+    width: min(560px, 100%);
+    margin-top: 12vh;
+    align-self: flex-start;
+    background: var(--paper-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-overlay);
+    overflow: hidden;
+}
+
+.palette__input {
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--sp-4);
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-family: var(--font-ui);
+    font-size: var(--fs-lg);
+}
+
+.palette__list {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.palette__item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-4);
+    text-align: left;
+    font-size: var(--fs-sm);
+    color: var(--ink-0);
+}
+
+.palette__item[aria-selected="true"] {
+    background: var(--accent-soft);
+}
+
+.palette__item .faint {
+    margin-left: auto;
+    font-size: var(--fs-xs);
+}
+
+/* ---------- Keyboard hints ---------- */
+
+kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 5px;
+    border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--paper-2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 15px;
+    text-align: center;
+    color: var(--ink-1);
+}
+
+.shortcuts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--sp-2) var(--sp-4);
+    align-items: center;
+    font-size: var(--fs-sm);
+}

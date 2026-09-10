@@ -3,23 +3,35 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg)](https://android-arsenal.com/api?level=21)
 
-**Aperture** is an Android library that captures and inspects HTTP/HTTPS network traffic through a beautiful web-based interface. Built as a modern alternative to Chucker, Aperture provides real-time monitoring and response mocking capabilities - all accessible from any device on your local network.
+**Aperture** is an Android library that inspects a running app from a browser. It started with
+HTTP traffic and now reaches the rest of the app's local state: preferences, DataStore,
+databases and files. It reads them live, and with one line of config it edits them too.
+
+Everything runs on the device. There is no desktop app, no proxy and no adb wrangling beyond a
+single port forward.
+
+## What Aperture inspects
+
+| Panel | Reads | Writes |
+|---|---|---|
+| **Network** | Every request and response through your OkHttp client, live | Mocks a response for a URL |
+| **Preferences** | Every file in `shared_prefs`, with each value's real type | Edit, add and remove keys; clear a file |
+| **DataStore** | Preferences DataStore instances you register | Edit, add and remove keys |
+| **Databases** | Tables, schema and paged rows in your SQLite databases; a query box | Edit a cell, run a statement |
+| **Files** | The app sandbox: files, cache, no_backup and external directories | Edit text, delete, download |
 
 ## ✨ Features
 
-- 🌐 **Web-Based UI** - Inspect network traffic from any browser on your network
-- 📡 **Real-Time Updates** - See requests as they happen with Server-Sent Events (SSE)
-- 🎭 **Response Mocking** - Mock API responses without changing your code
-- 🗄️ **Persistent Storage** - All requests saved in local database (Room)
-- 🔒 **Optional Authentication** - Secure your inspection server with token auth
-- 🎨 **Dark Mode** - Automatic dark mode support
-- 📱 **Responsive Design** - Works great on mobile and desktop browsers
-- 🚀 **Zero Overhead in Release** - No-op implementation for production builds
-- 🔍 **Advanced Filtering** - Search by URL, method, or status code
-- 📊 **Statistics Dashboard** - View aggregated request metrics
-- 🔔 **Foreground Service** - Server runs reliably in background with persistent notification
-- ⚡ **Quick Actions** - Stop server or clear data directly from notification
-- 🛡️ **Safe to Drop In** - Never crashes your app, never blocks its main thread, never fails a request
+- 🌐 **Web console** - the whole app's state from any browser on your network
+- 📡 **Live updates** - requests, preference changes and row edits arrive as they happen
+- ✍️ **Read and write** - change app state and watch the app pick it up, opt-in per app
+- 🎭 **Response mocking** - mock API responses without changing your code
+- ⌘ **Command palette and keyboard** - reach any panel, file or table without the mouse
+- 🎨 **Light and dark** - follows the system, with a toggle that overrides it
+- 📱 **Responsive** - three panes on a laptop, a stack with a tab bar on a phone
+- 🔒 **Optional authentication** - token auth, including for the live stream
+- 🚀 **Zero overhead in release** - no-op implementation for production builds
+- 🛡️ **Safe to drop in** - never crashes your app, never blocks its main thread, never fails a request
 
 ## 🚀 Quick Start
 
@@ -29,8 +41,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.1.1")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.1")
+    debugImplementation("io.github.desertstack:aperture:1.2.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.2.0")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -61,22 +73,36 @@ supplied by the library, since packaging options are application-level.
 
 ### 2. Initialize in Application Class
 
+Put every Aperture call inside one `BuildConfig.DEBUG` check:
+
 ```kotlin
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        Aperture.initialize(
-            context = this,
-            config = ApertureConfig(
-                enabled = BuildConfig.DEBUG,
-                port = 8080,
-                autoStart = true
+        if (BuildConfig.DEBUG) {
+            Aperture.initialize(
+                context = this,
+                config = ApertureConfig(
+                    port = 8080,
+                    autoStart = true
+                )
             )
-        )
+        }
     }
 }
 ```
+
+**Why the check, when the release build is already a no-op.** The release variant's methods are
+`inline` and empty, so the calls themselves compile to nothing. Kotlin still evaluates their
+*arguments*. Without the guard, `ApertureConfig(...)` is allocated in release, and
+
+```kotlin
+Aperture.registerDatabase("app.db", AppDatabase.get(this))   // ← opens the database in release
+```
+
+opens a Room database purely to hand it to a method that discards it. One check around the whole
+block keeps all of it out.
 
 Call `initialize()` once, from `Application.onCreate()`. The system also runs that method when
 your process starts in the background, for a push message, a background job or a widget update.
@@ -98,7 +124,55 @@ returns a pass-through interceptor, so your OkHttp client works either way.
 
 That's it! Make any HTTP request using your OkHttp client, and Aperture will capture it.
 
-### 5. View in Browser
+### 5. Reach the rest of your app's state (optional)
+
+Preferences and files need nothing: Aperture finds them and reads them through the same
+instances your app is using. Databases and DataStore need one line each.
+
+```kotlin
+if (BuildConfig.DEBUG) {
+    Aperture.registerDatabase("app.db", appDatabase)          // RoomDatabase or SupportSQLiteDatabase
+    Aperture.registerDataStore("settings", settingsDataStore) // DataStore<Preferences>
+    Aperture.registerSharedPreferences("secure", encryptedPrefs)
+}
+```
+
+Why registration is needed, and not merely preferred:
+
+- **Databases.** A second read-write connection makes Android issue `PRAGMA
+  journal_mode=PERSIST`, and your database loses WAL permanently. Room's invalidation also runs
+  on `CREATE TEMP TRIGGER`, and TEMP objects belong to one connection, so a write from anywhere
+  else could never wake your Flows. Registered, Aperture writes through your own connection and
+  calls `refreshVersionsAsync()`, so your UI updates while you type in the browser. Unregistered
+  databases are still listed and browsed, read-only.
+- **DataStore.** `SingleProcessDataStore` keeps a process-wide record of the files it has open
+  and throws if a second instance is built over one of them, so Aperture opening its own would
+  crash your app. It also caches values in memory and never re-reads the file. Unregistered
+  stores are listed by name and size only.
+- **EncryptedSharedPreferences.** Read from disk it is ciphertext, because your wrapper holds
+  the keys. Register the wrapper and the console shows plain text. Plain preferences files need
+  no registration.
+
+All three calls are safe to make after `initialize()`, and none of them throw.
+
+### 6. Turn on writing (optional)
+
+Aperture is read-only until you say otherwise:
+
+```kotlin
+ApertureConfig(allowWrites = true)
+```
+
+With it off, every route that would change app state answers 403 and the console hides its edit
+controls. With it on, edits are still deliberate: a field is read-only until you click Edit, a
+save shows the old value beside the new one, reversible writes offer Undo, and a destructive
+action names its target on a button labelled with the action.
+
+Statements that would damage your app are refused whatever this setting says: `ATTACH` (which
+silently drops your database out of WAL), `VACUUM INTO` (an arbitrary file write), `BEGIN` and
+the `PRAGMA`s that reconfigure a database.
+
+### 7. View in Browser
 
 Filter your Logcat on the `Aperture` tag. The server prints where to reach it:
 
@@ -239,10 +313,41 @@ Aperture.initialize(
         requireAuth = false,         // Require authentication
         showNotification = true,     // Show status notification
         localhostOnly = false,       // Bind to localhost only
-        headersToRedact = setOf("Authorization", "Cookie") // Redact sensitive headers
+        headersToRedact = setOf("Authorization", "Cookie"), // Redact sensitive headers
+        allowWrites = false,         // Let the console change app state
+        inspectors = ApertureInspector.ALL // Which panels to offer
     )
 )
 ```
+
+### Choosing panels
+
+```kotlin
+// Traffic only, the way Aperture worked before 1.2
+ApertureConfig(inspectors = ApertureInspector.NETWORK_ONLY)
+
+// Everything except the network
+ApertureConfig(inspectors = ApertureInspector.STORAGE)
+
+// Exactly what you want
+ApertureConfig(inspectors = setOf(ApertureInspector.NETWORK, ApertureInspector.PREFS))
+```
+
+A panel you leave out registers no routes at all, so its data never leaves the device.
+
+### What this exposes
+
+Aperture binds every network interface and asks for no token by default. That was captured
+traffic; it is now your app's preferences, databases and files. Aperture says so at startup:
+
+```
+Aperture: Storage inspection is open at http://192.168.1.100:8080
+Aperture: Anyone on this network can read this app's
+Aperture: preferences, databases and files.
+Aperture: Set requireAuth = true or localhostOnly = true
+```
+
+Either setting closes it. The console also shows a warning chip while the port is open.
 
 ### Predefined Configurations
 
@@ -295,6 +400,11 @@ val url = Aperture.getServerUrl()
 Aperture.clearAllData()
 Aperture.clearOldData(olderThanDays = 7)
 
+// Registration, for what Aperture cannot reach on its own
+Aperture.registerDatabase("app.db", appDatabase)
+Aperture.registerDataStore("settings", settingsDataStore)
+Aperture.registerSharedPreferences("secure", encryptedPrefs)
+
 // Get statistics
 val count = Aperture.getTransactionCount()             // suspending, reads the database
 val lastCount = Aperture.getTransactionCountSnapshot() // last known count, safe on any thread
@@ -333,34 +443,37 @@ Include it in API requests:
 Authorization: Bearer abc123xyz
 ```
 
-## 🌐 Web UI Features
+## 🖥️ The console
 
-### Transaction List
-- View all HTTP requests in real-time
-- Filter by HTTP method (GET, POST, PUT, DELETE)
-- Search by URL
-- Color-coded status badges (2xx green, 4xx orange, 5xx red)
-- Mock indicators for mocked transactions
+A three-pane instrument: an icon rail of panels, a list, and a detail view. Under 820 px the
+rail becomes a bottom tab bar and the two panes stack.
 
-### Transaction Details
-- Complete request/response data
-- Pretty-printed JSON
-- Headers display
-- Timing information
-- Error messages
+### Getting around
 
-### Mock Management
-- Toggle mock on/off
-- Edit status codes
-- Modify response headers
-- Update response bodies
-- Live preview
+| Key | What it does |
+|---|---|
+| `⌘K` / `Ctrl K` | Command palette: any panel, preferences file, database table or recent request |
+| `/` | Focus the list search |
+| `j` / `k` | Move down and up the list |
+| `g` then a letter | Jump to a panel |
+| `Esc` | Close whatever is open |
+| `?` | The shortcut list |
 
-### Statistics Dashboard
-- Total requests
-- Mocked requests count
-- Failed requests count
-- Average response time
+Every view has an address. `#/db/notes.db/notes?page=2` survives a reload and can be pasted to
+someone else.
+
+### Panels
+
+- **Network** — live list with search, method and status filters that apply together. The detail
+  view shows headers, bodies, timing and the mock editor. The list carries summaries only, so a
+  captured body never reaches memory for a view that does not draw it.
+- **Preferences** and **DataStore** — every key with its real type. An edit keeps that type
+  unless you say otherwise, because writing a Long into a key the app reads with `getInt` throws
+  inside your app.
+- **Databases** — tables, schema, paged rows and a query box. Large cells are cut short inside
+  SQLite so a row never exceeds the CursorWindow, with the whole value a click away.
+- **Files** — the sandbox as a tree, with text editing, download and delete. The console never
+  sends a path: it sends a signed id the device issued.
 
 ## 🏗️ Architecture
 
@@ -385,6 +498,9 @@ Aperture is built with modern Android technologies:
 
 | Feature | Aperture | Chucker |
 |---------|----------|---------|
+| Network inspection | ✅ | ✅ |
+| Preferences, DataStore, databases, files | ✅ | ❌ |
+| Editing app state | ✅ | ❌ |
 | Inspection UI | Web browser | In-app |
 | Screen size | Any device | Mobile only |
 | Real-time updates | ✅ SSE | ✅ |
@@ -429,6 +545,47 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 📋 Changelog
+
+### 1.2.0
+
+Aperture now inspects the rest of the app, not only its traffic, and the console was rebuilt to
+carry it.
+
+**Added**
+
+- **Preferences, DataStore, databases and files**, read live and edited with `allowWrites = true`.
+- **`Aperture.registerDatabase`, `registerDataStore` and `registerSharedPreferences`.**
+  Registration is what lets Aperture write through the app's own connection, so Room's
+  invalidation fires and encrypted preferences read as plain text.
+- **`ApertureConfig.allowWrites`** (default `false`) and **`ApertureConfig.inspectors`**
+  (default every panel).
+- **A new console**: three panes, a command palette, keyboard navigation, a density control, and
+  a theme toggle over a light and dark palette.
+- **A startup warning** when storage inspection is reachable on the network with no token.
+
+**Fixed**
+
+- **Captured content can no longer run as markup.** Every view built itself by pasting URLs,
+  headers and response bodies into `innerHTML`. The console now sets text, never markup.
+- **The status filter works.** The console sent `4xx` and the server read it with
+  `toIntOrNull()`, which is null, so the filter silently did nothing.
+- **Filters combine.** Choosing a method used to discard the search text, on both sides.
+- **Authentication works with the console.** `requireAuth = true` used to lock the page out of
+  its own API, and `EventSource` cannot send a header at all, so the live stream could never
+  connect. The console now asks for the token and sends it both ways.
+- **The list pages.** It was pinned to the first 100 rows.
+- **The console is cached and compressed** instead of being re-read from the APK on every
+  request.
+
+**Changed**
+
+- **Network endpoints moved** from `/api/transactions` and `/api/stats` to
+  `/api/network/transactions` and `/api/network/stats`, so every panel sits under its own name.
+- **Cross-origin requests are limited to loopback origins.** `Access-Control-Allow-Origin: *`
+  over captured traffic was already generous; over app databases it is not defensible.
+- **Requests to `/api` must arrive by IP address or localhost.** A host name is refused, which
+  is what stops a web page from pointing a domain it controls at the device and reading the
+  reply.
 
 ### 1.1.1
 

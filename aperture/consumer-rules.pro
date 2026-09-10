@@ -21,3 +21,7 @@
 # Room
 -keep class * extends androidx.room.RoomDatabase
 -dontwarn androidx.room.paging.**
+
+# DataStore is compileOnly. An app that does not use DataStore has no such class at runtime,
+# and R8 treats a missing class in a kept member's signature as an error.
+-dontwarn androidx.datastore.**

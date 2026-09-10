@@ -74,10 +74,16 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.compression)
+    implementation(libs.ktor.server.status.pages)
     // Note: SSE support is built into ktor-server-core
 
     // OkHttp (compileOnly - provided by consumer)
     compileOnly(libs.okhttp)
+
+    // DataStore (compileOnly - only apps that use DataStore have it at runtime)
+    compileOnly(libs.datastore.preferences)
+    testImplementation(libs.datastore.preferences)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
@@ -90,6 +96,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.okhttp)
+    testImplementation(libs.ktor.server.test.host)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

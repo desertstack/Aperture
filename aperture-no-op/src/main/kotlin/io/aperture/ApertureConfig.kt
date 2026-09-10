@@ -16,11 +16,14 @@ data class ApertureConfig(
     val showNotification: Boolean = false,
     val localhostOnly: Boolean = false,
     val alwaysReadResponseBody: Boolean = false,
-    val headersToRedact: Set<String> = emptySet()
+    val headersToRedact: Set<String> = emptySet(),
+    val allowWrites: Boolean = false,
+    val inspectors: Set<ApertureInspector> = ApertureInspector.ALL
 ) {
     companion object {
         val DEFAULT = ApertureConfig()
         val MINIMAL = ApertureConfig()
         val LOCALHOST_ONLY = ApertureConfig()
+        val NETWORK_ONLY = ApertureConfig()
     }
 }

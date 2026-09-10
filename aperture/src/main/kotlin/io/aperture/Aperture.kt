@@ -7,7 +7,19 @@ import android.os.Bundle
 import io.aperture.data.ApertureDatabase
 import io.aperture.data.entity.HttpTransaction
 import io.aperture.data.repository.TransactionRepository
+import android.content.SharedPreferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import io.aperture.inspect.InspectorModule
+import io.aperture.inspect.InspectorRegistry
+import io.aperture.inspect.InspectorContext
+import io.aperture.inspect.datastore.DataStoreInspector
+import io.aperture.inspect.db.DatabaseInspector
+import io.aperture.inspect.files.FilesInspector
+import io.aperture.inspect.prefs.PrefsInspector
+import io.aperture.inspect.network.NetworkInspector
 import io.aperture.interceptor.ApertureInterceptor
+import io.aperture.server.ApertureBus
 import io.aperture.server.ApertureServer
 import io.aperture.service.ApertureService
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +42,7 @@ object Aperture {
     private var server: ApertureServer? = null
     private var interceptor: ApertureInterceptor? = null
     private var authToken: String? = null
+    private var bus: ApertureBus? = null
     private var pendingServiceStart: Application.ActivityLifecycleCallbacks? = null
 
     // Cached so the notification and getServerUrl() never touch the database or the network
@@ -78,12 +91,16 @@ object Aperture {
                 config = config
             )
 
+            // One live-event stream, shared by every inspector
+            bus = ApertureBus()
+
             // Initialize server
             server = ApertureServer(
                 context = context.applicationContext,
-                repository = repository!!,
                 config = config,
-                authToken = if (config.requireAuth) authToken else null
+                authToken = if (config.requireAuth) authToken else null,
+                bus = bus!!,
+                modules = buildInspectors(config, repository!!, bus!!)
             )
         } catch (e: Exception) {
             // Aperture is a debug tool. It must not take the host app down with it.
@@ -105,6 +122,8 @@ object Aperture {
             }
         }
 
+        warnAboutExposure(config)
+
         // Auto-start server if configured
         if (config.autoStart) {
             startServer()
@@ -123,6 +142,134 @@ object Aperture {
         repository = null
         interceptor = null
         server = null
+        bus = null
+        InspectorRegistry.clear()
+    }
+
+    /**
+     * Build the inspectors the host app asked for.
+     *
+     * An inspector left out of [ApertureConfig.inspectors] is never built, so it registers no
+     * routes and its data never leaves the device.
+     */
+    private fun buildInspectors(
+        config: ApertureConfig,
+        repository: TransactionRepository,
+        bus: ApertureBus
+    ): List<InspectorModule> {
+        val modules = mutableListOf<InspectorModule>()
+        val inspectorContext = InspectorContext(context!!, config, bus)
+
+        if (ApertureInspector.NETWORK in config.inspectors) {
+            modules += NetworkInspector(repository, config, bus)
+        }
+        if (ApertureInspector.PREFS in config.inspectors) {
+            modules += PrefsInspector(inspectorContext)
+        }
+        if (ApertureInspector.DATASTORE in config.inspectors) {
+            modules += DataStoreInspector(inspectorContext)
+        }
+        if (ApertureInspector.DATABASES in config.inspectors) {
+            modules += DatabaseInspector(inspectorContext)
+        }
+        if (ApertureInspector.FILES in config.inspectors) {
+            modules += FilesInspector(inspectorContext)
+        }
+        return modules
+    }
+
+    /**
+     * Hand Aperture a SharedPreferences instance it could not reach on its own.
+     *
+     * Aperture finds every file in `shared_prefs` by itself and reads and writes it through the
+     * same process-wide instance the app holds, so plain preferences need no registration at
+     * all. An EncryptedSharedPreferences file is different: read from disk it is ciphertext,
+     * because the app's wrapper holds the keys. Register that wrapper and the console shows
+     * plain text.
+     *
+     * Call it after [initialize]. It never throws.
+     *
+     * @param name the preferences file name, without `.xml`
+     */
+    /**
+     * Hand Aperture the app's own database connection.
+     *
+     * Aperture finds the files in `databases` by itself, but only opens them read-only. That is
+     * deliberate: a second read-write connection makes Android issue `PRAGMA
+     * journal_mode=PERSIST` and the database loses WAL for good, and Room's invalidation runs on
+     * TEMP triggers that belong to one connection, so a write from anywhere else would never
+     * reach the app's own Flows.
+     *
+     * Register the database and both problems go away: Aperture writes through the connection
+     * the app is already using, and the app's observers fire.
+     *
+     * Accepts a `RoomDatabase` or a `SupportSQLiteDatabase`. Call it after [initialize]. It
+     * never throws.
+     *
+     * @param name the database file name, as it appears in the `databases` directory
+     */
+    /**
+     * Hand Aperture a Preferences DataStore.
+     *
+     * Registration is the only way here, and not out of caution. DataStore keeps a process-wide
+     * record of the files it has open and throws if a second instance is built over one of them,
+     * so Aperture opening its own would crash the app. It also caches its values in memory and
+     * never re-reads the file, so a write behind its back would be invisible and then
+     * overwritten.
+     *
+     * Call it after [initialize]. It never throws.
+     *
+     * @param name what the console calls this store
+     */
+    @JvmStatic
+    fun registerDataStore(name: String, dataStore: DataStore<Preferences>) {
+        try {
+            InspectorRegistry.registerDataStore(name, dataStore)
+        } catch (e: Exception) {
+            android.util.Log.e("Aperture", "Cannot register DataStore '$name'", e)
+        }
+    }
+
+    @JvmStatic
+    fun registerDatabase(name: String, database: Any) {
+        try {
+            InspectorRegistry.registerDatabase(name, database)
+        } catch (e: Exception) {
+            android.util.Log.e("Aperture", "Cannot register database '$name'", e)
+        }
+    }
+
+    @JvmStatic
+    fun registerSharedPreferences(name: String, prefs: SharedPreferences) {
+        try {
+            InspectorRegistry.registerPrefs(name, prefs)
+        } catch (e: Exception) {
+            android.util.Log.e("Aperture", "Cannot register preferences '$name'", e)
+        }
+    }
+
+    /**
+     * Say plainly what this configuration publishes, and to whom.
+     *
+     * Aperture reads app storage now, not only captured traffic. On the default settings that
+     * is readable by anyone on the same network, so the warning names the address and the fix.
+     */
+    private fun warnAboutExposure(config: ApertureConfig) {
+        val inspectsStorage = config.inspectors.any { it != ApertureInspector.NETWORK }
+        if (!inspectsStorage) return
+        if (config.localhostOnly || config.requireAuth) return
+
+        val url = getServerUrl().takeIf { it.isNotEmpty() } ?: "http://<device-ip>:${config.port}"
+        android.util.Log.w("Aperture", "===============================================")
+        android.util.Log.w("Aperture", "Storage inspection is open at $url")
+        android.util.Log.w("Aperture", "Anyone on this network can read this app's")
+        android.util.Log.w("Aperture", "preferences, databases and files.")
+        if (config.allowWrites) {
+            android.util.Log.w("Aperture", "They can also CHANGE them: allowWrites is on.")
+        }
+        android.util.Log.w("Aperture", "Set requireAuth = true or localhostOnly = true")
+        android.util.Log.w("Aperture", "in ApertureConfig to close it.")
+        android.util.Log.w("Aperture", "===============================================")
     }
 
     /**

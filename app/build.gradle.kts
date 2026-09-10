@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -19,9 +20,16 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        // So the app can keep every Aperture call out of the release build.
+        buildConfig = true
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // A real release build shrinks. The sample app does too, so the release variant is
+            // checked the way a consumer would actually ship it.
+            isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -48,17 +56,18 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
 
-    // Aperture for debug builds, no-op for release
-//    debugImplementation(project(":aperture"))
-//    releaseImplementation(project(":aperture-no-op"))
+    // Aperture for debug builds, no-op for release.
+    // The sample app builds the modules in this repo, so a change here is testable at once.
+    debugImplementation(project(":aperture"))
+    releaseImplementation(project(":aperture-no-op"))
 
+    implementation(libs.okhttp)
 
-    debugImplementation("io.github.desertstack:aperture:1.1.1")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.1.1")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
-    // OkHttp for network requests
-//    implementation(libs.okhttp)
+    // So the sample app has a database and a DataStore for the console to show
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.datastore.preferences)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
