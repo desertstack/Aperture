@@ -16,6 +16,7 @@ import io.aperture.inspect.InspectorContext
 import io.aperture.inspect.datastore.DataStoreInspector
 import io.aperture.inspect.db.DatabaseInspector
 import io.aperture.inspect.files.FilesInspector
+import io.aperture.inspect.logcat.LogcatInspector
 import io.aperture.inspect.prefs.PrefsInspector
 import io.aperture.inspect.network.NetworkInspector
 import io.aperture.interceptor.ApertureInterceptor
@@ -175,6 +176,9 @@ object Aperture {
         if (ApertureInspector.FILES in config.inspectors) {
             modules += FilesInspector(inspectorContext)
         }
+        if (ApertureInspector.LOGCAT in config.inspectors) {
+            modules += LogcatInspector()
+        }
         return modules
     }
 
@@ -263,7 +267,7 @@ object Aperture {
         android.util.Log.w("Aperture", "===============================================")
         android.util.Log.w("Aperture", "Storage inspection is open at $url")
         android.util.Log.w("Aperture", "Anyone on this network can read this app's")
-        android.util.Log.w("Aperture", "preferences, databases and files.")
+        android.util.Log.w("Aperture", "preferences, databases, files and logs.")
         if (config.allowWrites) {
             android.util.Log.w("Aperture", "They can also CHANGE them: allowWrites is on.")
         }

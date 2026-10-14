@@ -1,6 +1,7 @@
 package com.desertstack.aperture
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 
 /**
@@ -14,6 +15,17 @@ object SampleData {
     fun seed(context: Context) {
         seedPreferences(context)
         seedFiles(context)
+        seedLog()
+    }
+
+    /** One line at each level, and a stack trace, so the Logcat panel shows every colour. */
+    private fun seedLog() {
+        val tag = "SampleApp"
+        Log.v(tag, "Verbose: the sample app started")
+        Log.d(tag, "Debug: seeded preferences and files")
+        Log.i(tag, "Info: open the Logcat panel in the console")
+        Log.w(tag, "Warn: this is what a warning looks like")
+        Log.e(tag, "Error: this is what an error looks like", IllegalStateException("Sample failure"))
     }
 
     private fun seedPreferences(context: Context) {

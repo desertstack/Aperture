@@ -16,6 +16,7 @@ import { createNetworkPanel } from './panels/network.js';
 import { createPrefsPanel, createDataStorePanel } from './panels/prefs.js';
 import { createFilesPanel } from './panels/files.js';
 import { createDatabasesPanel } from './panels/databases.js';
+import { createLogcatPanel } from './panels/logcat.js';
 
 const PANEL_FACTORIES = {
   network: createNetworkPanel,
@@ -23,6 +24,7 @@ const PANEL_FACTORIES = {
   datastore: createDataStorePanel,
   db: createDatabasesPanel,
   files: createFilesPanel,
+  logcat: createLogcatPanel,
 };
 
 const root = document.getElementById('root');
@@ -302,6 +304,8 @@ function handleRoute(route) {
   const panel = panels.get(wanted);
   if (activePanel && activePanel !== panel) activePanel.deactivate();
   activePanel = panel;
+  // A panel with no list, such as Logcat, takes the list pane's room too.
+  document.body.setAttribute('data-layout', panel.layout || 'split');
   panel.activate(route);
 }
 
@@ -408,7 +412,8 @@ function wireKeyboard() {
 
     if (event.key === '/') {
       event.preventDefault();
-      document.querySelector('.list-pane input[type="search"]')?.focus();
+      // The search box of whatever panel is on screen, wherever that panel keeps it.
+      [...document.querySelectorAll('input[type="search"]')].find((el) => el.offsetParent !== null)?.focus();
       return;
     }
 

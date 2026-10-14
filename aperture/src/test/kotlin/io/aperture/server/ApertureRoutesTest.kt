@@ -221,4 +221,36 @@ class ApertureRoutesTest {
 
         assertEquals(HttpStatusCode.NotFound, client.get("/ui/../index.html").status)
     }
+
+    @Test
+    fun `a view address opens the console`() = testApplication {
+        // A reload of /logcat, or a pasted link to a table, must reach the page, not a 404.
+        install(ApertureConfig(port = 8080))
+
+        for (path in listOf("/logcat", "/network/42", "/db/notes.db/notes?page=2")) {
+            val response = client.get(path)
+            assertEquals(path, HttpStatusCode.OK, response.status)
+            assertTrue(path, response.bodyAsText().contains("/ui/js/app.js"))
+        }
+    }
+
+    @Test
+    fun `a missing api route is not answered with the page`() = testApplication {
+        install(ApertureConfig(port = 8080))
+
+        val response = client.get("/api/nothing-here") { header(HttpHeaders.Host, "127.0.0.1") }
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertFalse(response.bodyAsText().contains("/ui/js/app.js"))
+    }
+
+    @Test
+    fun `only paths outside api and ui are views`() {
+        assertTrue(ApertureServer.isConsoleView("/logcat"))
+        assertTrue(ApertureServer.isConsoleView("/db/notes.db/notes"))
+        assertTrue(ApertureServer.isConsoleView("/apiary"))
+        assertFalse(ApertureServer.isConsoleView("/api"))
+        assertFalse(ApertureServer.isConsoleView("/api/capabilities"))
+        assertFalse(ApertureServer.isConsoleView("/ui/js/app.js"))
+    }
 }

@@ -117,6 +117,9 @@ const ICONS = {
   copy: ['M9 9h10v12H9z', 'M15 5H5v12'],
   command: 'M9 3a3 3 0 1 0 3 3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z',
   play: 'M7 4l12 8-12 8z',
+  pause: ['M8 5v14', 'M16 5v14'],
+  down: ['M12 4v15', 'M6 13l6 6 6-6'],
+  terminal: ['M4 5h16v14H4z', 'M7 10l3 2-3 2', 'M12 15h5'],
   file: ['M6 3h8l4 4v14H6z', 'M14 3v4h4'],
   dot: 'M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
 };

@@ -19,11 +19,13 @@ single port forward.
 | **DataStore** | Preferences DataStore instances you register | Edit, add and remove keys |
 | **Databases** | Tables, schema and paged rows in your SQLite databases; a query box | Edit a cell, run a statement |
 | **Files** | The app sandbox: files, cache, no_backup and external directories | Edit text, delete, download |
+| **Logcat** | This app's own log, live, coloured by level | — |
 
 ## ✨ Features
 
 - 🌐 **Web console** - the whole app's state from any browser on your network
 - 📡 **Live updates** - requests, preference changes and row edits arrive as they happen
+- 📜 **Live Logcat** - your app's log in the browser, coloured by level, with filters
 - ✍️ **Read and write** - change app state and watch the app pick it up, opt-in per app
 - 🎭 **Response mocking** - mock API responses without changing your code
 - ⌘ **Command palette and keyboard** - reach any panel, file or table without the mouse
@@ -331,6 +333,9 @@ ApertureConfig(inspectors = ApertureInspector.STORAGE)
 
 // Exactly what you want
 ApertureConfig(inspectors = setOf(ApertureInspector.NETWORK, ApertureInspector.PREFS))
+
+// Everything except the log
+ApertureConfig(inspectors = ApertureInspector.ALL - ApertureInspector.LOGCAT)
 ```
 
 A panel you leave out registers no routes at all, so its data never leaves the device.
@@ -338,12 +343,13 @@ A panel you leave out registers no routes at all, so its data never leaves the d
 ### What this exposes
 
 Aperture binds every network interface and asks for no token by default. That was captured
-traffic; it is now your app's preferences, databases and files. Aperture says so at startup:
+traffic; it is now your app's preferences, databases, files and log. Log lines often hold
+tokens and personal data. Aperture says so at startup:
 
 ```
 Aperture: Storage inspection is open at http://192.168.1.100:8080
 Aperture: Anyone on this network can read this app's
-Aperture: preferences, databases and files.
+Aperture: preferences, databases, files and logs.
 Aperture: Set requireAuth = true or localhostOnly = true
 ```
 
@@ -459,7 +465,7 @@ rail becomes a bottom tab bar and the two panes stack.
 | `Esc` | Close whatever is open |
 | `?` | The shortcut list |
 
-Every view has an address. `#/db/notes.db/notes?page=2` survives a reload and can be pasted to
+Every view has an address. `/db/notes.db/notes?page=2` survives a reload and can be pasted to
 someone else.
 
 ### Panels
@@ -474,6 +480,16 @@ someone else.
   SQLite so a row never exceeds the CursorWindow, with the whole value a click away.
 - **Files** — the sandbox as a tree, with text editing, download and delete. The console never
   sends a path: it sends a signed id the device issued.
+- **Logcat** — this app's own log, live. Each level has its own colour: verbose grey, debug
+  blue, info green, warn amber, error red and assert purple. Pick the lowest level to show,
+  filter by text, or type `tag:Name` (or click a tag) for one tag. A stack trace shows its
+  header once. Pause holds the view while lines keep arriving; scroll up and the view stops
+  following until you scroll back down. Save writes the shown lines to a text file.
+
+  Nothing reads the log until the panel opens. Then one `logcat` process reads for the app's
+  own process, needs no permission, and runs until the server stops. The device keeps the last
+  5,000 lines, so a tab that reconnects gets only what it missed. Lines travel on their own
+  stream, so a busy log never pushes network or storage events aside.
 
 ## 🏗️ Architecture
 
@@ -557,6 +573,8 @@ carry it.
 - **`Aperture.registerDatabase`, `registerDataStore` and `registerSharedPreferences`.**
   Registration is what lets Aperture write through the app's own connection, so Room's
   invalidation fires and encrypted preferences read as plain text.
+- **A Logcat panel**: this app's own log, streamed live and coloured by level
+  (`ApertureInspector.LOGCAT`).
 - **`ApertureConfig.allowWrites`** (default `false`) and **`ApertureConfig.inspectors`**
   (default every panel).
 - **A new console**: three panes, a command palette, keyboard navigation, a density control, and

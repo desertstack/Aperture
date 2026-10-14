@@ -287,6 +287,13 @@
     margin-bottom: var(--sp-3);
 }
 
+/* ---------- Wide panels ---------- */
+
+/* A panel with no list, such as Logcat, draws across both panes. */
+body[data-layout="wide"] .list-pane {
+    display: none;
+}
+
 /* ---------- Narrow screens ---------- */
 
 @media (max-width: 820px) {
@@ -354,6 +361,11 @@
         display: none;
     }
 
+    /* A wide panel has no list to go back to. */
+    body[data-layout="wide"] .detail-pane {
+        display: block;
+    }
+
     .detail {
         padding: var(--sp-4);
     }
@@ -362,5 +374,9 @@
 @media (min-width: 821px) {
     .back-btn {
         display: none;
+    }
+
+    body[data-layout="wide"] .body {
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
     }
 }

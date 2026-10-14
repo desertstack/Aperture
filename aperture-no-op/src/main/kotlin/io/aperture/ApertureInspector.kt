@@ -20,7 +20,13 @@ enum class ApertureInspector {
     DATABASES,
 
     /** The app's private file sandbox. */
-    FILES;
+    FILES,
+
+    /**
+     * This app's own Logcat output, streamed live. Log lines often hold tokens and personal
+     * data, so leave this out, or set requireAuth, when the console is reachable by others.
+     */
+    LOGCAT;
 
     companion object {
         /** Every inspector. This is the default. */

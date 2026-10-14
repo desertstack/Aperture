@@ -231,6 +231,18 @@ class ApertureServer internal constructor(
                 respondAsset("$UI_ASSET_ROOT/$requested", contentTypeFor(requested))
             }
 
+            // Every other path is a view inside the console, such as /logcat or
+            // /db/notes.db/notes. The console reads the path itself, so a reload or a pasted
+            // link opens the same view. A missing API route or asset stays a 404: answering it
+            // with the page would hand a script HTML where it expects JSON.
+            get("{view...}") {
+                if (isConsoleView(call.request.path())) {
+                    respondAsset(INDEX_ASSET, ContentType.Text.Html)
+                } else {
+                    call.respond(HttpStatusCode.NotFound)
+                }
+            }
+
             route("/api") {
                 get("/capabilities") { call.respond(capabilities()) }
 
@@ -459,6 +471,10 @@ class ApertureServer internal constructor(
                     part.toInt() in 0..255
             }
         }
+
+        /** Whether a path names a view in the console rather than an API route or an asset. */
+        internal fun isConsoleView(path: String): Boolean =
+            listOf("/api", "/ui").none { path == it || path.startsWith("$it/") }
 
         /** Cross-origin calls are allowed from a developer's own machine and nowhere else. */
         internal fun isLoopbackOrigin(origin: String): Boolean {
