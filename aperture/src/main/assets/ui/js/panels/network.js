@@ -11,7 +11,7 @@ import * as sse from '../core/sse.js';
 import { go, setParam } from '../core/router.js';
 import { toast } from '../ui/toast.js';
 import { confirmAction } from '../ui/dialog.js';
-import { bytes, duration, time, dateTime, statusTone, prettyBody, headerLines } from '../core/format.js';
+import { bytes, duration, time, dateTime, statusTone, prettyBody, headerLines, curlCommand } from '../core/format.js';
 
 const PAGE = 100;
 
@@ -252,6 +252,7 @@ export function createNetworkPanel(ctx) {
       ])),
       tx.error ? section('Error', h('pre', { class: 'code t-err', text: tx.error })) : null,
       section('Request headers', code(headerLines(tx.requestHeaders), 'No request headers.')),
+      section('cURL', code(curlCommand(tx)), copyButton(() => curlCommand(tx), 'cURL command copied.')),
       section('Request body', code(prettyBody(tx.requestBody, tx.requestContentType), 'No request body.')),
       section('Response headers', code(headerLines(tx.responseHeaders), 'No response headers.')),
       section('Response body', code(prettyBody(tx.responseBody, tx.responseContentType), 'No response body.')),
@@ -271,7 +272,7 @@ export function createNetworkPanel(ctx) {
     const bodyField = h('textarea', {
       class: 'textarea',
       'aria-label': 'Mock response body',
-      value: tx.mockResponseBody ?? tx.responseBody ?? '',
+      value: prettyBody(tx.mockResponseBody ?? tx.responseBody ?? '', tx.responseContentType),
     });
 
     async function save(enable) {
@@ -448,13 +449,46 @@ export function createNetworkPanel(ctx) {
 
 // ---------- Small shared builders ----------
 
-function section(title, content) {
+function section(title, content, action = null) {
   return h(
     'section',
     { class: 'section' },
-    h('div', { class: 'section__head' }, h('span', { class: 'eyebrow', text: title })),
+    h('div', { class: 'section__head' }, h('span', { class: 'eyebrow', text: title }), action),
     content
   );
+}
+
+function copyButton(getText, doneMessage) {
+  return h('button', {
+    class: 'btn btn--quiet btn--sm',
+    title: 'Copy',
+    'aria-label': 'Copy',
+    onClick: async () => {
+      try {
+        await copyText(getText());
+        toast.ok(doneMessage);
+      } catch (e) {
+        toast.error('Could not copy. Select the text and copy it by hand.');
+      }
+    },
+  }, icon('copy', 14), 'Copy');
+}
+
+/**
+ * The Clipboard API works only on a secure origin. The console is often opened over plain
+ * HTTP on the device's address, so fall back to a hidden text area.
+ */
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = h('textarea', { value: text, style: { position: 'fixed', opacity: '0' } });
+  document.body.append(area);
+  area.select();
+  const ok = document.execCommand('copy');
+  area.remove();
+  if (!ok) throw new Error('copy failed');
 }
 
 function kv(pairs) {

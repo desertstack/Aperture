@@ -66,18 +66,69 @@ export function prettyBody(text, contentType) {
   }
 }
 
-/** Headers reach the console as a JSON object in a string. */
-export function headerLines(json) {
-  if (!json) return '';
+/**
+ * Headers reach the console as JSON in a string: a list of {name, value} pairs, which keeps
+ * repeated names such as Set-Cookie. A plain {name: value} object also works.
+ * Returns [name, value] pairs, or null if the text is not JSON.
+ */
+export function headerEntries(json) {
+  if (!json) return [];
+  let parsed;
   try {
-    const parsed = JSON.parse(json);
-    const entries = Object.entries(parsed);
-    if (entries.length === 0) return '';
-    const width = Math.max(...entries.map(([k]) => k.length));
-    return entries.map(([k, v]) => `${k.padEnd(width)}  ${v}`).join('\n');
+    parsed = JSON.parse(json);
   } catch (e) {
-    return json;
+    return null;
   }
+  if (Array.isArray(parsed)) {
+    return parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => [String(item.name ?? ''), String(item.value ?? '')]);
+  }
+  if (parsed && typeof parsed === 'object') {
+    return Object.entries(parsed).map(([k, v]) => [k, String(v)]);
+  }
+  return null;
+}
+
+export function headerLines(json) {
+  const entries = headerEntries(json);
+  if (entries === null) return json;
+  if (entries.length === 0) return '';
+  const width = Math.max(...entries.map(([k]) => k.length));
+  return entries.map(([k, v]) => `${k.padEnd(width)}  ${v}`).join('\n');
+}
+
+/** Wrap text in single quotes for a POSIX shell. */
+function shellQuote(text) {
+  return `'${String(text).replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * The request as a curl command you can paste into a terminal.
+ * Content-Length is left out because curl counts the body itself.
+ */
+export function curlCommand(tx) {
+  const method = (tx.method || 'GET').toUpperCase();
+  const parts = [`curl${method === 'GET' ? '' : ` -X ${method}`} ${shellQuote(tx.url)}`];
+
+  const headers = (headerEntries(tx.requestHeaders) || [])
+    .filter(([name]) => name.toLowerCase() !== 'content-length');
+  const hasBody = Boolean(tx.requestBody);
+  const hasContentType = headers.some(([name]) => name.toLowerCase() === 'content-type');
+  // OkHttp keeps the body's content type on the body, not in the header list.
+  if (hasBody && !hasContentType && tx.requestContentType) {
+    headers.push(['Content-Type', tx.requestContentType]);
+  }
+  for (const [name, value] of headers) parts.push(`-H ${shellQuote(`${name}: ${value}`)}`);
+
+  if (hasBody) {
+    if (tx.requestBodyIsPlainText === false) {
+      parts.push('# Binary request body left out');
+    } else {
+      parts.push(`--data-raw ${shellQuote(tx.requestBody)}`);
+    }
+  }
+  return parts.join(' \\\n  ');
 }
 
 /** Shorten the middle of a long path so both ends stay readable. */
