@@ -42,7 +42,7 @@ function applyProps(el, props) {
       el.addEventListener(key.slice(2).toLowerCase(), value);
     } else if (key === 'value') {
       el.value = value;
-    } else if (key === 'checked' || key === 'disabled' || key === 'hidden') {
+    } else if (key === 'checked' || key === 'disabled' || key === 'hidden' || key === 'open') {
       el[key] = Boolean(value);
     } else {
       el.setAttribute(key, value === true ? '' : String(value));
@@ -122,4 +122,16 @@ const ICONS = {
   terminal: ['M4 5h16v14H4z', 'M7 10l3 2-3 2', 'M12 15h5'],
   file: ['M6 3h8l4 4v14H6z', 'M14 3v4h4'],
   dot: 'M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+  // The mark: a lens ring with three blades.
+  aperture: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M12 3l3.5 7.5', 'M20.2 15.5l-8.2-.5', 'M7 19.5l4.5-7'],
+  phone: ['M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z', 'M11 18h2'],
+  clock: ['M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z', 'M12 8v4l3 2'],
+  link: ['M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1', 'M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'],
+  code: ['M8 8l-4 4 4 4', 'M16 8l4 4-4 4', 'M13.5 5l-3 14'],
+  globe: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M3 12h18', 'M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z'],
+  inbox: ['M4 13l2.5-7h11l2.5 7v6H4z', 'M4 13h4.5l1 2h5l1-2H20'],
+  box: ['M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'M4 7.5l8 4.5 8-4.5', 'M12 12v9'],
+  chevron: 'M6 9l6 6 6-6',
+  sidebar: ['M4 5h16v14H4z', 'M9 5v14'],
+  wand: ['M4 20L15 9', 'M14 4v2M19 9h2M17.5 5.5l1.5-1.5M14 9l1 1'],
 };

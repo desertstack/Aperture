@@ -98,6 +98,57 @@ export function headerLines(json) {
   return entries.map(([k, v]) => `${k.padEnd(width)}  ${v}`).join('\n');
 }
 
+/** True if the text parses as JSON and looks like it was meant to be JSON. */
+export function isJson(text, contentType) {
+  if (!text) return false;
+  const looksJson = (contentType || '').toLowerCase().includes('json') || /^\s*[[{]/.test(text);
+  if (!looksJson) return false;
+  try {
+    JSON.parse(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Why a JSON text does not parse, or null if it does. */
+export function jsonError(text) {
+  try {
+    JSON.parse(text);
+    return null;
+  } catch (e) {
+    return e.message;
+  }
+}
+
+const JSON_TOKEN = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}[\],])/g;
+
+/**
+ * Split JSON text into typed pieces for colour: key, str, num, lit, punct, or null for plain
+ * text such as white space. Joined in order, the pieces give back the input exactly.
+ */
+export function jsonTokens(text) {
+  const out = [];
+  let last = 0;
+  JSON_TOKEN.lastIndex = 0;
+  for (let m = JSON_TOKEN.exec(text); m; m = JSON_TOKEN.exec(text)) {
+    if (m.index > last) out.push([null, text.slice(last, m.index)]);
+    if (m[1] !== undefined) {
+      out.push([m[2] ? 'key' : 'str', m[1]]);
+      if (m[2]) out.push(['punct', m[2]]);
+    } else if (m[3] !== undefined) {
+      out.push(['num', m[3]]);
+    } else if (m[4] !== undefined) {
+      out.push(['lit', m[4]]);
+    } else {
+      out.push(['punct', m[5]]);
+    }
+    last = JSON_TOKEN.lastIndex;
+  }
+  if (last < text.length) out.push([null, text.slice(last)]);
+  return out;
+}
+
 /** Wrap text in single quotes for a POSIX shell. */
 function shellQuote(text) {
   return `'${String(text).replace(/'/g, `'\\''`)}'`;

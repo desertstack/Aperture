@@ -18,9 +18,23 @@
 }
 
 .topbar__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
     font-size: var(--fs-md);
     font-weight: 600;
     letter-spacing: -0.01em;
+    flex-shrink: 0;
+}
+
+.topbar__brand svg {
+    color: var(--accent);
+}
+
+.topbar__divider {
+    width: 1px;
+    height: 16px;
+    background: var(--line-strong);
     flex-shrink: 0;
 }
 
@@ -51,6 +65,46 @@
     align-items: center;
     gap: var(--sp-1);
     flex-shrink: 0;
+}
+
+/* ---------- Gate: the locked and the unreachable screens ---------- */
+
+.gate {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    padding: var(--sp-4);
+}
+
+.gate__card {
+    width: min(420px, 100%);
+    padding: var(--sp-5);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--paper-1);
+}
+
+.gate__title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.gate__title h1 {
+    font-size: var(--fs-lg);
+    font-weight: 600;
+}
+
+.gate__text {
+    margin-top: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--ink-1);
+}
+
+.gate__form {
+    display: flex;
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
 }
 
 /* ---------- Live indicator ---------- */
@@ -87,10 +141,20 @@
 
 /* ---------- Body ---------- */
 
+/* The rail is a real column. Opening it moves the panes over; it never covers them. */
+body {
+    --rail-now: var(--rail-w);
+}
+
+body[data-rail="open"] {
+    --rail-now: var(--rail-w-open);
+}
+
 .body {
     display: grid;
-    grid-template-columns: var(--rail-w) minmax(0, auto) minmax(0, 1fr);
+    grid-template-columns: var(--rail-now) minmax(0, auto) minmax(0, 1fr);
     min-height: 0;
+    transition: grid-template-columns var(--dur) var(--ease);
 }
 
 /* ---------- Rail ---------- */
@@ -102,7 +166,6 @@
     border-right: 1px solid var(--line);
     padding: var(--sp-2) 0;
     overflow: hidden;
-    transition: width var(--dur) var(--ease);
 }
 
 .rail__item {
@@ -151,16 +214,12 @@
     transition: opacity var(--dur) var(--ease);
 }
 
-.rail:hover,
-.rail[data-open="true"] {
-    width: var(--rail-w-open);
-    position: relative;
-    z-index: 20;
+body[data-rail="open"] .rail__label {
+    opacity: 1;
 }
 
-.rail:hover .rail__label,
-.rail[data-open="true"] .rail__label {
-    opacity: 1;
+.rail__toggle {
+    color: var(--ink-2);
 }
 
 .rail__spacer {
@@ -195,6 +254,17 @@
     display: flex;
     gap: var(--sp-2);
     align-items: center;
+}
+
+.list-pane__content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.list-pane__filters .seg--fill {
+    flex: 1;
 }
 
 .list-pane__scroll {
@@ -242,12 +312,176 @@
 .detail-pane {
     overflow-y: auto;
     min-height: 0;
+    min-width: 0;
     background: var(--paper-0);
+    /* The request layout picks one or two columns from the pane's width, not the window's. */
+    container-type: inline-size;
 }
 
 .detail {
     padding: var(--sp-5) var(--sp-5) var(--sp-6);
     max-width: 1100px;
+    min-width: 0;
+}
+
+/* A detail that only holds an empty state fills the pane, so the state sits in the middle. */
+.detail--center {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    max-width: none;
+}
+
+/* The same for any panel whose detail holds only an empty state. */
+.detail:has(> .empty:only-child) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    max-width: none;
+}
+
+.detail > .empty:only-child {
+    flex: 1;
+}
+
+/* A request: the head stays on screen while the content scrolls under it. */
+.detail--request {
+    padding-top: 0;
+    max-width: none;
+}
+
+.req-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--paper-0);
+    padding-top: var(--sp-4);
+    margin: 0 calc(var(--sp-5) * -1) var(--sp-4);
+    padding-left: var(--sp-5);
+    padding-right: var(--sp-5);
+    border-bottom: 1px solid var(--line);
+}
+
+.req-head__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+
+.req-head__main {
+    min-width: 0;
+    flex: 1;
+}
+
+.req-head__line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+}
+
+.req-head__path {
+    font-family: var(--font-mono);
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: var(--lh-tight);
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.req-head__host {
+    margin-top: 2px;
+    font-size: var(--fs-sm);
+    color: var(--ink-1);
+    overflow-wrap: anywhere;
+}
+
+.req-head__actions {
+    display: flex;
+    gap: var(--sp-1);
+    flex-shrink: 0;
+}
+
+.req-head .stats {
+    margin-top: var(--sp-2);
+}
+
+/* Links that scroll to a part of the page. They hide nothing. */
+.jumpbar {
+    display: flex;
+    gap: var(--sp-1);
+    margin: var(--sp-2) calc(var(--sp-2) * -1) 0;
+    padding-bottom: var(--sp-2);
+}
+
+.jumpbar a {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 var(--sp-2);
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+    color: var(--ink-1);
+}
+
+.jumpbar a:hover {
+    background: var(--paper-2);
+    color: var(--ink-0);
+    text-decoration: none;
+}
+
+/* The request in one column, with cURL in a side column that stays on screen. */
+.split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 32%);
+    gap: var(--sp-5);
+    align-items: start;
+}
+
+.split__side {
+    position: sticky;
+    top: calc(var(--head-h, 150px) + var(--sp-3));
+}
+
+.split__side .code {
+    max-height: calc(100vh - var(--head-h, 150px) - 140px);
+}
+
+/* A narrow pane has no room for two columns, so cURL drops below the rest. */
+@container (max-width: 960px) {
+    .split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .split__side {
+        position: static;
+    }
+}
+
+/* A group title between panels: Request, Response, Mock. */
+.group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-5) 0 var(--sp-2);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    scroll-margin-top: calc(var(--head-h, 150px) + var(--sp-3));
+}
+
+.group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
+
+.split__main > .group-title:first-child {
+    margin-top: 0;
 }
 
 .detail__head {
@@ -287,6 +521,16 @@
     margin-bottom: var(--sp-3);
 }
 
+/* A section title is a heading, not a shouted label. */
+.section__head .eyebrow,
+.section__title {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink-0);
+}
+
 /* ---------- Wide panels ---------- */
 
 /* A panel with no list, such as Logcat, draws across both panes. */
@@ -297,9 +541,21 @@ body[data-layout="wide"] .list-pane {
 /* ---------- Narrow screens ---------- */
 
 @media (max-width: 820px) {
+    /* minmax(0, …) and not 1fr: a long URL must wrap, not widen the page. */
     .body {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr auto;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .topbar {
+        gap: var(--sp-2);
+        padding: 0 var(--sp-2);
+    }
+
+    .topbar__divider,
+    .live__text,
+    .chip__label {
+        display: none;
     }
 
     .rail {
@@ -330,12 +586,24 @@ body[data-layout="wide"] .list-pane {
         border-radius: 0 0 2px 2px;
     }
 
-    .rail__label {
-        opacity: 1;
-        font-size: 10px;
+    /* Seven labels share a phone's width, and a mono face is wide, so they set small and tight. */
+    .rail__item {
+        min-width: 0;
+        flex: 1 1 0;
     }
 
-    .rail__spacer {
+    .rail__label {
+        opacity: 1;
+        max-width: 100%;
+        padding: 0 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 9px;
+        letter-spacing: -0.04em;
+    }
+
+    .rail__spacer,
+    .rail__toggle {
         display: none;
     }
 
@@ -369,6 +637,30 @@ body[data-layout="wide"] .list-pane {
     .detail {
         padding: var(--sp-4);
     }
+
+    .detail--request {
+        padding-top: 0;
+    }
+
+    .req-head {
+        margin-left: calc(var(--sp-4) * -1);
+        margin-right: calc(var(--sp-4) * -1);
+        padding-left: var(--sp-4);
+        padding-right: var(--sp-4);
+    }
+
+    .req-head__top {
+        flex-direction: column;
+    }
+
+    .kv {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+
+    .kv__k {
+        padding-bottom: 0;
+    }
 }
 
 @media (min-width: 821px) {
@@ -377,6 +669,6 @@ body[data-layout="wide"] .list-pane {
     }
 
     body[data-layout="wide"] .body {
-        grid-template-columns: var(--rail-w) minmax(0, 1fr);
+        grid-template-columns: var(--rail-now) minmax(0, 1fr);
     }
 }

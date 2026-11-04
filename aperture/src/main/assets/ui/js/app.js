@@ -72,7 +72,7 @@ function renderTokenScreen() {
         setToken(input.value.trim());
         await boot();
       },
-      style: { display: 'flex', gap: 'var(--sp-2)', 'margin-top': 'var(--sp-3)' },
+      class: 'gate__form',
     },
     input,
     h('button', { class: 'btn btn--primary', type: 'submit', text: 'Open' })
@@ -82,16 +82,15 @@ function renderTokenScreen() {
     root,
     h(
       'div',
-      { id: 'token-screen', style: { display: 'grid', 'place-items': 'center', height: '100%', padding: 'var(--sp-4)' } },
+      { id: 'token-screen', class: 'gate' },
       h(
         'div',
-        { style: { width: 'min(420px, 100%)' } },
-        h('div', { style: { display: 'flex', 'align-items': 'center', gap: 'var(--sp-2)' } },
+        { class: 'gate__card' },
+        h('div', { class: 'gate__title' },
           icon('lock', 18),
-          h('h1', { style: { 'font-size': 'var(--fs-lg)' }, text: 'Aperture is locked' })),
+          h('h1', { text: 'Aperture is locked' })),
         h('p', {
-          class: 'muted',
-          style: { 'margin-top': 'var(--sp-2)', 'font-size': 'var(--fs-sm)' },
+          class: 'gate__text',
           text: 'This app runs Aperture with requireAuth turned on. Filter Logcat on the Aperture tag to find the token.',
         }),
         form
@@ -104,8 +103,9 @@ function renderTokenScreen() {
 function renderFatal(message) {
   fill(
     root,
-    h('div', { style: { display: 'grid', 'place-items': 'center', height: '100%' } },
+    h('div', { class: 'gate' },
       h('div', { class: 'empty' },
+        h('span', { class: 'empty__icon' }, icon('alert', 18)),
         h('span', { class: 'empty__title', text: 'Aperture is not answering.' }),
         h('span', { text: message })))
   );
@@ -136,7 +136,8 @@ function renderShell() {
           'aria-label': 'Back to list',
           onClick: () => document.body.setAttribute('data-stack', 'list'),
         }, icon('back')),
-        h('span', { class: 'topbar__brand', text: 'Aperture' }),
+        h('span', { class: 'topbar__brand' }, icon('aperture', 18), 'Aperture'),
+        h('span', { class: 'topbar__divider', 'aria-hidden': 'true' }),
         crumbs,
         h('div', { class: 'topbar__tools' }, ...buildTools())
       ),
@@ -170,6 +171,7 @@ function renderShell() {
 
   applyStoredTheme();
   applyStoredDensity();
+  applyStoredRail();
   registerGlobalCommands();
   wireKeyboard();
   sse.connect();
@@ -182,10 +184,7 @@ function renderShell() {
 function listPaneContent(listPane, resizer) {
   let content = listPane.querySelector('[data-list-content]');
   if (!content) {
-    content = h('div', {
-      'data-list-content': '',
-      style: { display: 'flex', 'flex-direction': 'column', 'min-height': '0', flex: '1' },
-    });
+    content = h('div', { 'data-list-content': '', class: 'list-pane__content' });
     listPane.insertBefore(content, resizer);
   }
   return content;
@@ -213,11 +212,39 @@ function buildRail() {
     h(
       'button',
       { class: 'rail__item', title: 'About this device', onClick: showAbout },
-      icon('eye'),
+      icon('phone'),
       h('span', { class: 'rail__label', text: 'Device' })
+    ),
+    h(
+      'button',
+      { class: 'rail__item rail__toggle', id: 'rail-toggle', type: 'button', onClick: toggleRail },
+      icon('sidebar'),
+      h('span', { class: 'rail__label' })
     )
   );
   return rail;
+}
+
+// ---------- Rail: open or closed, by the viewer's choice ----------
+
+function applyStoredRail() {
+  setRail(read('aperture.rail') === 'open');
+}
+
+function toggleRail() {
+  const open = document.body.getAttribute('data-rail') !== 'open';
+  setRail(open);
+  write('aperture.rail', open ? 'open' : 'closed');
+}
+
+function setRail(open) {
+  document.body.setAttribute('data-rail', open ? 'open' : 'closed');
+  const btn = document.getElementById('rail-toggle');
+  if (!btn) return;
+  const label = open ? 'Collapse sidebar' : 'Expand sidebar';
+  btn.setAttribute('aria-expanded', String(open));
+  btn.title = `${label}  ([)`;
+  btn.querySelector('.rail__label').textContent = open ? 'Collapse' : 'Expand';
 }
 
 function buildTools() {
@@ -232,11 +259,15 @@ function buildTools() {
 
   if (!capabilities.allowWrites) {
     tools.push(
-      h('span', {
-        class: 'chip chip--quiet',
-        title: 'Aperture is read-only. Set allowWrites = true in ApertureConfig to edit app state.',
-        text: 'Read-only',
-      })
+      h(
+        'span',
+        {
+          class: 'chip chip--outline',
+          title: 'Aperture is read-only. Set allowWrites = true in ApertureConfig to edit app state.',
+        },
+        icon('lock', 12),
+        h('span', { class: 'chip__label', text: 'Read-only' })
+      )
     );
   }
 
@@ -245,12 +276,13 @@ function buildTools() {
       h(
         'button',
         {
-          class: 'chip chip--warn',
+          class: 'chip chip--outline',
+          type: 'button',
           title: 'Open on this network with no token. Click for what to do about it.',
           onClick: showExposure,
         },
-        icon('alert', 12),
-        h('span', { text: 'Open network' })
+        h('span', { class: 'dot dot--warn' }),
+        h('span', { class: 'chip__label', text: 'Open network' })
       )
     );
   }
@@ -423,6 +455,12 @@ function wireKeyboard() {
       return;
     }
 
+    if (event.key === '[') {
+      event.preventDefault();
+      toggleRail();
+      return;
+    }
+
     if (pendingGo) {
       pendingGo = false;
       const target = capabilities.inspectors.find((i) => i.id.startsWith(event.key.toLowerCase()));
@@ -468,6 +506,7 @@ function registerGlobalCommands() {
     })),
     { label: 'Switch theme', icon: 'moon', run: toggleTheme },
     { label: 'Switch density', icon: 'sliders', run: toggleDensity },
+    { label: 'Expand or collapse the sidebar', hint: '[', icon: 'sidebar', run: toggleRail },
     { label: 'Keyboard shortcuts', hint: '?', icon: 'command', run: showShortcuts },
     { label: 'About this device', icon: 'eye', run: showAbout },
   ]);
@@ -486,6 +525,7 @@ function showShortcuts() {
         ['/', 'Search the list'],
         ['j / k', 'Move down and up'],
         ['g then a letter', 'Go to an inspector'],
+        ['[', 'Expand or collapse the sidebar'],
         ['Esc', 'Close'],
         ['?', 'This list'],
       ].flatMap(([keys, what]) => [h('kbd', { text: keys }), h('span', { text: what })])
@@ -508,7 +548,7 @@ function showAbout() {
         ['Aperture', capabilities.apertureVersion],
         ['Writes', capabilities.allowWrites ? 'Allowed' : 'Read-only'],
         ['Auth', capabilities.requireAuth ? 'Token required' : 'Open'],
-      ].flatMap(([k, v]) => [h('div', { class: 'kv__k', text: k }), h('div', { class: 'kv__v', text: v })])
+      ].flatMap(([k, v]) => [h('div', { class: 'kv__k', text: k }), h('div', { class: 'kv__v', text: v ?? '—' })])
     )
   );
 }
@@ -520,10 +560,10 @@ function showExposure() {
       'div',
       null,
       h('p', {
-        style: { 'font-size': 'var(--fs-sm)', 'margin-bottom': 'var(--sp-3)' },
+        class: 'prose',
         text: 'Aperture answers on every network interface and asks for no token. Anyone on this network can read what this console shows, and that now includes app storage.',
       }),
-      h('p', { class: 'muted', style: { 'font-size': 'var(--fs-sm)' }, text: 'Set one of these in ApertureConfig:' }),
+      h('p', { class: 'prose muted', text: 'Set one of these in ApertureConfig:' }),
       h('pre', { class: 'code', text: 'requireAuth = true\n// or\nlocalhostOnly = true' })
     )
   );

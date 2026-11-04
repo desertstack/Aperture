@@ -198,6 +198,310 @@
     color: var(--ink-1);
 }
 
+/* A standing condition: a neutral chip with a coloured dot, not a coloured block. */
+.chip--outline {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-1);
+    font-weight: 500;
+}
+
+.chip--outline:hover {
+    color: var(--ink-0);
+    border-color: var(--ink-2);
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 34px;
+    padding: 0 6px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: var(--paper-2);
+    color: var(--ink-1);
+}
+
+.badge--ok { background: var(--ok-soft); color: var(--ok); }
+.badge--info { background: var(--info-soft); color: var(--info); }
+.badge--warn { background: var(--warn-soft); color: var(--warn); }
+.badge--err { background: var(--err-soft); color: var(--err); }
+.badge--mock { background: var(--mock-soft); color: var(--mock); }
+
+.badge--method {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-0);
+}
+
+/* ---------- Inline stats ---------- */
+
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1) var(--sp-4);
+    font-size: var(--fs-sm);
+    color: var(--ink-1);
+    font-variant-numeric: tabular-nums;
+}
+
+.stats__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.stats__item svg {
+    color: var(--ink-2);
+}
+
+/* ---------- Panels ---------- */
+
+.panel {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--paper-1);
+    margin-bottom: var(--sp-4);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.panel__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 38px;
+    padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-1);
+}
+
+.panel__title {
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
+
+.panel__meta {
+    font-size: var(--fs-xs);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.panel__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    margin-left: auto;
+}
+
+.panel__body {
+    padding: var(--sp-3);
+    min-width: 0;
+}
+
+.panel__body--flush {
+    padding: 0;
+}
+
+/* cURL is a command, so it reads in its own face. Two classes, so it wins over .code below. */
+.code.code--curl {
+    font-family: var(--font-curl);
+    font-size: var(--fs-xs);
+    line-height: 1.7;
+}
+
+/* Code inside a panel loses its own frame: the panel is the frame. */
+.panel .code {
+    border: none;
+    border-radius: 0;
+    background: var(--paper-1);
+}
+
+.panel__note {
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
+    font-size: var(--fs-xs);
+    color: var(--ink-1);
+}
+
+/* A panel that opens and closes. The head is the toggle. */
+.panel--fold > summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.panel--fold > summary::-webkit-details-marker {
+    display: none;
+}
+
+.panel--fold > summary > svg {
+    color: var(--ink-2);
+    transform: rotate(-90deg);
+    transition: transform var(--dur) var(--ease);
+}
+
+.panel--fold[open] > summary > svg {
+    transform: none;
+}
+
+.panel--fold:not([open]) > summary {
+    border-bottom: none;
+}
+
+.panel--fold > summary:hover {
+    background: var(--paper-2);
+}
+
+/* ---------- Header table ---------- */
+
+.hdr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+    table-layout: fixed;
+}
+
+.hdr-table th,
+.hdr-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 6px var(--sp-3);
+    border-bottom: 1px solid var(--line);
+}
+
+.hdr-table tr:last-child td {
+    border-bottom: none;
+}
+
+.hdr-table tr:hover td {
+    background: var(--paper-2);
+}
+
+.hdr-table__name {
+    width: 26%;
+    min-width: 120px;
+    color: var(--ink-1);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.hdr-table__value {
+    font-family: var(--font-mono);
+    color: var(--ink-0);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/* ---------- JSON syntax ---------- */
+
+.syn-key { color: var(--syn-key); }
+.syn-str { color: var(--syn-str); }
+.syn-num { color: var(--syn-num); }
+.syn-lit { color: var(--syn-lit); }
+.syn-punct { color: var(--syn-punct); }
+
+/* ---------- Small segmented control ---------- */
+
+.seg--text .seg__btn {
+    width: auto;
+    padding: 0 8px;
+    font-family: var(--font-ui);
+    font-size: var(--fs-xs);
+    font-weight: 550;
+}
+
+.seg--sm .seg__btn {
+    height: 22px;
+}
+
+.seg--fill {
+    display: flex;
+}
+
+.seg--fill .seg__btn {
+    flex: 1;
+}
+
+/* ---------- Form messages ---------- */
+
+.field__hint {
+    font-size: var(--fs-xs);
+    color: var(--ink-2);
+}
+
+.field__error {
+    font-size: var(--fs-xs);
+    color: var(--err);
+    font-family: var(--font-mono);
+}
+
+.textarea[aria-invalid="true"] {
+    border-color: var(--err);
+}
+
+.search--grow {
+    flex: 1;
+    min-width: 0;
+}
+
+.select--compact {
+    width: auto;
+    flex-shrink: 0;
+}
+
+/* A head row inside a form, such as a label with a button beside it. */
+.panel__head--bare {
+    min-height: 0;
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+}
+
+.mock-form > * + * {
+    margin-top: var(--sp-3);
+}
+
+.mock-form .field {
+    margin-bottom: 0;
+}
+
+.field--status .input {
+    width: 110px;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--sp-3);
+}
+
+.form-row .field {
+    margin-bottom: 0;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+}
+
 .dot {
     width: 6px;
     height: 6px;
@@ -284,6 +588,7 @@
 
 .row__sub {
     display: flex;
+    min-width: 0;
     align-items: center;
     gap: var(--sp-3);
     margin-top: 3px;
@@ -295,6 +600,66 @@
 
 :root[data-density="compact"] .row__sub {
     display: none;
+}
+
+/* A network row: status, method, path, then the timing on the right. */
+.row--net {
+    position: relative;
+    padding-left: var(--row-pad);
+    border-left-width: 0;
+}
+
+.row--net::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--band, transparent);
+}
+
+.row--net[aria-selected="true"]::before {
+    background: var(--accent);
+}
+
+.row--net.tone-ok { --band: transparent; }
+.row--net.tone-warn { --band: var(--warn); }
+.row--net.tone-err { --band: var(--err); }
+
+.row--net .row__title {
+    direction: ltr;
+}
+
+.row--net .row__sub {
+    padding-left: 0;
+    margin-top: 2px;
+}
+
+.row__host {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.row__metric {
+    flex-shrink: 0;
+    font-size: var(--fs-xs);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.row--net .badge {
+    height: 18px;
+    min-width: 32px;
+}
+
+.row--net .row__method {
+    width: auto;
+    min-width: 34px;
 }
 
 /* A row that has just arrived is marked for a moment, not animated at length. */
@@ -322,11 +687,16 @@
 }
 
 .kv__v {
-    font-family: var(--font-mono);
     font-size: var(--fs-sm);
     font-variant-numeric: tabular-nums;
     padding: 5px 0;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+/* Data, such as a URL or a value read from storage, keeps the mono face. */
+.kv__v--mono {
+    font-family: var(--font-mono);
 }
 
 /* ---------- Table ---------- */
@@ -421,6 +791,7 @@ td.null,
     white-space: pre-wrap;
     word-break: break-word;
     overflow-x: auto;
+    max-width: 100%;
     max-height: 480px;
     overflow-y: auto;
 }
@@ -447,6 +818,24 @@ td.null,
 
 .empty__title {
     color: var(--ink-1);
+    font-weight: 550;
+}
+
+.empty__icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    margin-bottom: var(--sp-1);
+    border-radius: 50%;
+    background: var(--paper-2);
+    color: var(--ink-2);
+}
+
+/* An empty state that owns its whole pane sits in the middle of it. */
+.empty--fill {
+    flex: 1;
+    min-height: 240px;
 }
 
 @keyframes pulse {
@@ -686,6 +1075,24 @@ kbd {
     margin: var(--sp-2) var(--sp-3) 0;
 }
 
+.banner--mock {
+    border-left-color: var(--mock);
+    background: var(--mock-soft);
+}
+
+.banner--mock svg {
+    color: var(--mock);
+}
+
+.banner--ok {
+    border-left-color: var(--ok);
+    background: var(--ok-soft);
+}
+
+.banner--ok svg {
+    color: var(--ok);
+}
+
 .banner--err {
     border-left-color: var(--err);
     background: var(--err-soft);
@@ -889,5 +1296,14 @@ kbd {
 
     .log__tid {
         display: none;
+    }
+
+    .hdr-table__name {
+        width: 40%;
+        min-width: 0;
+    }
+
+    .req-head__actions .btn {
+        padding-left: 0;
     }
 }
