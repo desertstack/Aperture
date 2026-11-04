@@ -43,8 +43,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.2.0")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.2.0")
+    debugImplementation("io.github.desertstack:aperture:1.2.1")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.2.1")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -561,6 +561,22 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 📋 Changelog
+
+### 1.2.1
+
+Fixes the request headers in the console. Upgrade from 1.2.0.
+
+**Fixed**
+
+- **Headers are readable again.** The server sends headers as a list of name and value pairs,
+  so that repeated names such as `Set-Cookie` stay. The console read them as one object, so
+  each header showed as its index and `[object Object]`.
+
+**Added**
+
+- **A cURL section** in the request detail, with a Copy button. It works also when the console
+  is open over plain HTTP.
+- **The mock body opens as formatted JSON.**
 
 ### 1.2.0
 
