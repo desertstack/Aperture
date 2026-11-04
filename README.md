@@ -28,6 +28,7 @@ single port forward.
 - 📜 **Live Logcat** - your app's log in the browser, coloured by level, with filters
 - ✍️ **Read and write** - change app state and watch the app pick it up, opt-in per app
 - 🎭 **Response mocking** - mock API responses without changing your code
+- 📋 **Copy as cURL** - replay any captured request from a terminal
 - ⌘ **Command palette and keyboard** - reach any panel, file or table without the mouse
 - 🎨 **Light and dark** - follows the system, with a toggle that overrides it
 - 📱 **Responsive** - three panes on a laptop, a stack with a tab bar on a phone
@@ -43,8 +44,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.2.1")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.2.1")
+    debugImplementation("io.github.desertstack:aperture:1.3.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.3.0")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -195,7 +196,7 @@ The server binds its port on a background thread, so this banner appears a momen
 app starts.
 
 
-<img src="https://github.com/desertstack/Aperture/blob/main/web_ui.png" width=50% height=50%>
+<img src="web_ui.png" alt="The Aperture console: the panel rail on the left, the request list, and a POST request with its headers, JSON bodies and a cURL command" width="100%">
 
 Open this URL in any browser on your network to inspect traffic!
 
@@ -451,8 +452,13 @@ Authorization: Bearer abc123xyz
 
 ## 🖥️ The console
 
-A three-pane instrument: an icon rail of panels, a list, and a detail view. Under 820 px the
-rail becomes a bottom tab bar and the two panes stack.
+A three-pane instrument: a rail of panels, a list, and a detail view. The rail opens to show its
+labels and closes to icons, with its button or the `[` key. It moves the panes over and never
+covers them, and the console remembers your choice. Under 820 px the rail becomes a bottom tab
+bar and the two panes stack.
+
+The console uses IBM Plex Mono, and JetBrains Mono for cURL. Both fonts ship inside the library,
+so the console needs no network.
 
 ### Getting around
 
@@ -462,6 +468,7 @@ rail becomes a bottom tab bar and the two panes stack.
 | `/` | Focus the list search |
 | `j` / `k` | Move down and up the list |
 | `g` then a letter | Jump to a panel |
+| `[` | Open or close the panel rail |
 | `Esc` | Close whatever is open |
 | `?` | The shortcut list |
 
@@ -470,9 +477,14 @@ someone else.
 
 ### Panels
 
-- **Network** — live list with search, method and status filters that apply together. The detail
-  view shows headers, bodies, timing and the mock editor. The list carries summaries only, so a
-  captured body never reaches memory for a view that does not draw it.
+- **Network** — a live list of every call in the order it happened, with search and method
+  filters. There is no status filter, because hiding calls by status breaks their order: a
+  failed or 4xx/5xx call stands out by its badge and its coloured edge. The detail is one page:
+  request headers and body, response headers and body, and the mock editor, with cURL in a
+  column beside them. Headers show as a table, JSON bodies in colour with a Pretty/Raw switch,
+  and every part has Copy. Each section folds, and the console remembers which ones you closed.
+  The list carries summaries only, so a captured body never reaches memory for a view that does
+  not draw it.
 - **Preferences** and **DataStore** — every key with its real type. An edit keeps that type
   unless you say otherwise, because writing a Long into a key the app reads with `getInt` throws
   inside your app.
@@ -561,6 +573,41 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 📋 Changelog
+
+### 1.3.0
+
+A new request view, built around what you look for first. Upgrade from 1.2.x; no public API has
+changed.
+
+**Changed**
+
+- **The request detail is one page.** Request, response and mock sit in one column, and cURL in
+  a column beside them that stays on screen. Links under the request head scroll to each part.
+  On a narrow pane, cURL moves below the rest.
+- **Every section folds**, both bodies too, and the console remembers which ones you closed.
+- **Headers show as a name/value table**, with Copy all. A long list starts closed.
+- **Bodies show JSON in colour**, with a Pretty/Raw switch, the size, and Copy. A binary or cut
+  body says so.
+- **The request list has no status filter.** Hiding calls by status broke their order. Search
+  and method stay. Each row shows a status badge, and a failed or 4xx/5xx call has a coloured
+  edge.
+- **The panel rail opens and closes with a button or `[`.** It used to open on hover and cover
+  the list.
+- **The console uses IBM Plex Mono, and JetBrains Mono for cURL.** Both ship inside the library
+  (about 81 KB, SIL Open Font License 1.1), so the console still needs no network.
+- **A logo, calmer status chips, and empty states in the middle of their pane.**
+
+**Added**
+
+- **Copy URL and Copy as cURL** in the request head.
+- **Format JSON** and a JSON check in the mock editor.
+
+**Fixed**
+
+- **The phone layout no longer scrolls sideways.** A long URL widened the page.
+- **A click on a request kept adding live-update listeners**, one more set for every click.
+- **A click on a request cleared the search and method filters.**
+- **The request list went back to the top after each click.**
 
 ### 1.2.1
 
