@@ -29,6 +29,7 @@ single port forward.
 - ✍️ **Read and write** - change app state and watch the app pick it up, opt-in per app
 - 🎭 **Response mocking** - mock API responses without changing your code
 - 📋 **Copy as cURL** - replay any captured request from a terminal
+- 📊 **Export to Excel** - tick calls, or all of them, and get the sequence as an .xlsx sheet
 - ⌘ **Command palette and keyboard** - reach any panel, file or table without the mouse
 - 🎨 **Light and dark** - follows the system, with a toggle that overrides it
 - 📱 **Responsive** - three panes on a laptop, a stack with a tab bar on a phone
@@ -44,8 +45,8 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.desertstack:aperture:1.3.0")
-    releaseImplementation("io.github.desertstack:aperture-no-op:1.3.0")
+    debugImplementation("io.github.desertstack:aperture:1.4.0")
+    releaseImplementation("io.github.desertstack:aperture-no-op:1.4.0")
 
     // Required: Aperture hooks into your OkHttp client and does not bundle it
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -196,7 +197,7 @@ The server binds its port on a background thread, so this banner appears a momen
 app starts.
 
 
-<img src="web_ui.png" alt="The Aperture console: the panel rail on the left, the request list, and a POST request with its headers, JSON bodies and a cURL command" width="100%">
+<img src="web_ui.png" alt="The Aperture console: the panel rail on the left, the request list with calls ticked for export, and a POST request with its headers and JSON bodies, and the mock editor beside them" width="100%">
 
 Open this URL in any browser on your network to inspect traffic!
 
@@ -373,11 +374,10 @@ Aperture.initialize(this, ApertureConfig.LOCALHOST_ONLY)
 
 ### Enable Mocking via Web UI
 
-1. Click on any transaction in the web UI
-2. Toggle "Enable Mock Response"
-3. Set custom status code, headers, and body
-4. Click "Save Mock"
-5. Future requests to the same URL will return your mocked response!
+1. Click a request in the Network list.
+2. The mock editor is in the column on the right. Set the status code and the body.
+3. Click **Save and turn on**.
+4. Every later request to the same URL gets your response and does not reach the network.
 
 ### Programmatic Mock Control
 
@@ -479,12 +479,19 @@ someone else.
 
 - **Network** — a live list of every call in the order it happened, with search and method
   filters. There is no status filter, because hiding calls by status breaks their order: a
-  failed or 4xx/5xx call stands out by its badge and its coloured edge. The detail is one page:
-  request headers and body, response headers and body, and the mock editor, with cURL in a
-  column beside them. Headers show as a table, JSON bodies in colour with a Pretty/Raw switch,
-  and every part has Copy. Each section folds, and the console remembers which ones you closed.
-  The list carries summaries only, so a captured body never reaches memory for a view that does
-  not draw it.
+  failed or 4xx/5xx call stands out by its badge and its coloured edge. Times show to the
+  millisecond. The detail is one page: request headers and body, response headers and body, and
+  cURL, with the mock editor in a column beside them that stays on screen. Headers show as a
+  table, JSON bodies in colour with a Pretty/Raw switch, and every part has Copy. Each section
+  folds, and the console remembers which ones you closed. The list carries summaries only, so a
+  captured body never reaches memory for a view that does not draw it.
+- **Export to Excel** — tick calls in the Network list (Shift-click ticks a range), or tick
+  **Select all** for every call under the filters, then click **Export to Excel**. The file has
+  one row per call, oldest first: the start time to the millisecond, duration, method, status,
+  URL, request and response headers and bodies, sizes, whether it was mocked, the error, and
+  the cURL command. The device writes the file one call at a time, with no extra library.
+  An Excel cell holds 32,767 characters, so a longer body is cut and says so. A binary body
+  shows as a note with its size.
 - **Preferences** and **DataStore** — every key with its real type. An edit keeps that type
   unless you say otherwise, because writing a Long into a key the app reads with `getInt` throws
   inside your app.
@@ -573,6 +580,37 @@ limitations under the License.
 - Built with ❤️ for the Android community
 
 ## 📋 Changelog
+
+### 1.4.0
+
+The mock editor moves to where you can see it, and a captured call sequence can leave the
+console as an Excel sheet. Upgrade from 1.3.x; no public API has changed.
+
+**Added**
+
+- **Export to Excel.** Tick calls in the Network list, or tick Select all, and click Export to
+  Excel. You get one `.xlsx` sheet with one row per call in the order they happened, with the
+  request and the response. Select all takes every call under the search and method filters,
+  also the ones not loaded yet, but not the calls that arrive after the click. JSON bodies are
+  indented with every value kept as the server sent it. The device writes the file one call at
+  a time, so a long sequence does not fill the app's memory, and the library gets no new
+  dependency.
+
+**Changed**
+
+- **The mock editor is in the column on the right** and stays on screen while you scroll the
+  request and response. It used to be folded at the bottom of the page.
+- **cURL is a folding section after the response.** Copy as cURL stays in the request head.
+- **Times show to the millisecond** (`15:30:50.167`), so calls close together are in a clear
+  order.
+- **The two columns stay side by side on a laptop screen.** They now stack only when the
+  request pane is narrower than 720 px.
+
+**Fixed**
+
+- **The console showed the wrong library version.** The number was typed by hand and stayed at
+  1.2.0 in 1.2.1 and 1.3.0. It now comes from the published version.
+- **Header names such as Accept-Language no longer break across two lines.**
 
 ### 1.3.0
 
