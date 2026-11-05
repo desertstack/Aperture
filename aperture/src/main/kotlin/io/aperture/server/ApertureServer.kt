@@ -433,7 +433,7 @@ class ApertureServer internal constructor(
     private class CachedAsset(val bytes: ByteArray, val etag: String)
 
     companion object {
-        internal const val APERTURE_VERSION = "1.2.0"
+        internal const val APERTURE_VERSION = io.aperture.BuildConfig.APERTURE_VERSION
         private const val UI_ASSET_ROOT = "ui"
         private const val INDEX_ASSET = "ui/index.html"
 

@@ -127,6 +127,30 @@ class TransactionRepository(
     }
 
     /**
+     * The ids of the calls to export, in the order they happened.
+     *
+     * @param ids the calls picked one by one; used when [all] is false
+     * @param all every call under [search] and [method], up to and with [upToId], less [except]
+     */
+    suspend fun exportIds(
+        ids: Collection<Long>,
+        all: Boolean,
+        search: String?,
+        method: String?,
+        upToId: Long?,
+        except: Collection<Long>
+    ): List<Long> {
+        if (all) {
+            val skip = except.toHashSet()
+            return dao.idsInCallOrder(search, method, upToId).filter { it !in skip }
+        }
+        // There are at most maxRecords rows, so reading every id once is cheap. It also gives
+        // the call order without one IN (...) query per chunk of ids.
+        val wanted = ids.toHashSet()
+        return dao.idsInCallOrder(null, null, null).filter { it in wanted }
+    }
+
+    /**
      * Get a single transaction by ID
      */
     suspend fun getById(id: Long): HttpTransaction? {

@@ -23,14 +23,16 @@ export function time(epochMs) {
   if (!epochMs) return '—';
   const d = new Date(Number(epochMs));
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  // A fixed 24-hour form with milliseconds, so calls that are close together still sort by eye.
+  const two = (n) => String(n).padStart(2, '0');
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
 }
 
 export function dateTime(epochMs) {
   if (!epochMs) return '—';
   const d = new Date(Number(epochMs));
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString();
+  return `${d.toLocaleDateString()} ${time(epochMs)}`;
 }
 
 /** Which status band a code falls in, for colour and for filtering. */

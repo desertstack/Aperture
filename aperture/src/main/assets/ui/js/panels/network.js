@@ -8,8 +8,12 @@
  * there is no status filter, because hiding calls by status breaks that order. A failed or
  * 4xx/5xx call stands out by its badge and its left edge instead.
  *
- * The detail is one page: request, response and mock in one column, cURL in a column beside
- * them. Every section folds, and the console remembers which ones you closed.
+ * A tick on a row picks it for the Excel export. "Select all" picks every call under the
+ * filters, also the ones not loaded yet, but not the ones that arrive after the click.
+ *
+ * The detail is one page: request, response and cURL in one column, and the mock in a column
+ * beside them that stays on screen. The sections in the main column fold, and the console
+ * remembers which ones you closed.
  */
 
 import { h, fill, icon } from '../core/dom.js';
@@ -42,6 +46,13 @@ export function createNetworkPanel(ctx) {
   let unsubscribe = [];
   let searchTimer = null;
   let headObserver = null;
+
+  // The export selection. Either calls picked one by one, or "all": every call under the
+  // filters up to the newest id at the moment of the click, less the ones unticked after.
+  let picked = new Set();
+  let allMode = null; // { upToId, count, except: Set }
+  let lastPicked = null;
+  let exporting = false;
 
   const listBody = h('div', { class: 'rows' });
   const listScroll = h('div', { class: 'list-pane__scroll' }, listBody);
@@ -92,8 +103,135 @@ export function createNetworkPanel(ctx) {
         'aria-label': 'Clear captured traffic',
         onClick: clearAll,
       }, icon('trash', 15))
-    )
+    ),
+    h('div', { class: 'list-pane__select' })
   );
+  const selectLine = toolbar.lastChild;
+
+  // ---------- Export selection ----------
+
+  function isPicked(id) {
+    if (allMode) return id <= allMode.upToId && !allMode.except.has(id);
+    return picked.has(id);
+  }
+
+  function pickedCount() {
+    return allMode ? Math.max(0, allMode.count - allMode.except.size) : picked.size;
+  }
+
+  function setPicked(id, on) {
+    if (allMode) {
+      if (id > allMode.upToId) return;
+      if (on) allMode.except.delete(id);
+      else allMode.except.add(id);
+      if (pickedCount() === 0) allMode = null;
+    } else if (on) {
+      picked.add(id);
+    } else {
+      picked.delete(id);
+    }
+  }
+
+  /** A tick on a row. With Shift, every loaded row from the last tick to this one follows it. */
+  function onPick(id, on, shift) {
+    const from = shift && lastPicked !== null ? rows.findIndex((r) => r.id === lastPicked) : -1;
+    const to = rows.findIndex((r) => r.id === id);
+    if (from >= 0 && to >= 0) {
+      const [a, b] = from < to ? [from, to] : [to, from];
+      for (let i = a; i <= b; i++) setPicked(rows[i].id, on);
+    } else {
+      setPicked(id, on);
+    }
+    lastPicked = id;
+    paintPicks();
+  }
+
+  function toggleAll() {
+    if (allMode || picked.size > 0) {
+      clearPicks();
+      return;
+    }
+    if (rows.length === 0) return;
+    allMode = {
+      upToId: Math.max(...rows.map((r) => r.id)),
+      count: total,
+      except: new Set(),
+    };
+    paintPicks();
+  }
+
+  function clearPicks() {
+    picked = new Set();
+    allMode = null;
+    lastPicked = null;
+    paintPicks();
+  }
+
+  /** Update the ticks and the select line, without a new list. */
+  function paintPicks() {
+    for (const box of listBody.querySelectorAll('input[data-pick]')) {
+      box.checked = isPicked(Number(box.dataset.pick));
+    }
+    const count = pickedCount();
+    const everything = allMode && allMode.except.size === 0;
+    const all = h('input', {
+      type: 'checkbox',
+      class: 'pick',
+      'aria-label': count ? 'Clear the selection' : 'Select every call under the filters',
+      checked: Boolean(everything),
+      disabled: rows.length === 0 && count === 0,
+      onChange: toggleAll,
+    });
+    all.indeterminate = count > 0 && !everything;
+    fill(
+      selectLine,
+      h('label', { class: 'list-pane__select-all' },
+        all,
+        h('span', { text: count ? `${count} selected` : 'Select all' })),
+      count
+        ? h('div', { class: 'list-pane__select-actions' },
+            h('button', { class: 'btn btn--quiet btn--sm', type: 'button', text: 'Clear', onClick: clearPicks }),
+            h('button', {
+              class: 'btn btn--sm',
+              type: 'button',
+              disabled: exporting,
+              title: 'The picked calls, oldest first, with request and response, as an Excel sheet',
+              onClick: exportPicks,
+            }, icon('download', 13), exporting ? 'Exporting…' : 'Export to Excel'))
+        : h('span', { class: 'list-pane__select-hint', text: 'Tick calls to export them' })
+    );
+  }
+
+  async function exportPicks() {
+    if (exporting || pickedCount() === 0) return;
+    const body = allMode
+      ? {
+          all: true,
+          search: filters.search || null,
+          method: filters.method || null,
+          upToId: allMode.upToId,
+          except: [...allMode.except],
+        }
+      : { ids: [...picked] };
+    exporting = true;
+    paintPicks();
+    try {
+      const file = await api.postForFile('/api/network/transactions/export', body);
+      const url = URL.createObjectURL(file);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const link = h('a', { href: url, download: `aperture-calls-${ctx.capabilities.appId}-${stamp}.xlsx` });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.ok(`${pickedCount()} ${pickedCount() === 1 ? 'call' : 'calls'} exported.`);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      exporting = false;
+      paintPicks();
+    }
+  }
 
   function paintFilters() {
     if (searchInput.value !== filters.search) searchInput.value = filters.search;
@@ -156,6 +294,7 @@ export function createNetworkPanel(ctx) {
     } else {
       fill(listBody, ...rows.map((row) => renderRow(row)));
     }
+    paintPicks();
 
     fill(
       footer,
@@ -169,6 +308,24 @@ export function createNetworkPanel(ctx) {
   function renderRow(row) {
     const tone = row.error ? 'err' : statusTone(row.responseCode);
     const { host, path } = splitUrl(row.url);
+    // The tick sits beside the row button, not in it: a control inside a button is not allowed.
+    const box = h('input', {
+      type: 'checkbox',
+      class: 'pick',
+      dataset: { pick: String(row.id) },
+      'aria-label': `Pick ${row.method} ${path} for export`,
+      checked: isPicked(row.id),
+      onClick: (e) => onPick(row.id, e.target.checked, e.shiftKey),
+    });
+    return h(
+      'div',
+      { class: 'net-item' },
+      h('label', { class: 'net-item__pick' }, box),
+      rowButton(row, tone, host, path)
+    );
+  }
+
+  function rowButton(row, tone, host, path) {
     return h(
       'button',
       {
@@ -210,6 +367,8 @@ export function createNetworkPanel(ctx) {
       total = 0;
       selectedId = null;
       current = null;
+      picked = new Set();
+      allMode = null;
       renderList();
       go('/network');
       toast.ok('Captured traffic cleared.');
@@ -307,7 +466,8 @@ export function createNetworkPanel(ctx) {
         { class: 'jumpbar', 'aria-label': 'Parts of this request' },
         jump('Request', 'sec-req'),
         jump('Response', 'sec-res'),
-        jump('Mock', 'sec-mock', () => { mock.open = true; })
+        jump('Mock', 'sec-mock'),
+        jump('cURL', 'sec-curl', () => { curl.open = true; })
       )
     );
 
@@ -315,17 +475,23 @@ export function createNetworkPanel(ctx) {
     headObserver = new ResizeObserver(() => ctx.detail.style.setProperty('--head-h', `${head.offsetHeight}px`));
     headObserver.observe(head);
 
-    const curl = h(
-      'section',
-      { class: 'panel', id: 'sec-curl' },
+    const curl = remember(h(
+      'details',
+      { class: 'panel panel--fold', id: 'sec-curl', open: foldOpen('curl', false) },
       h(
-        'div',
+        'summary',
         { class: 'panel__head' },
+        icon('chevron', 14),
         h('span', { class: 'panel__title', text: 'cURL' }),
-        h('div', { class: 'panel__actions' }, copyButton(() => curlCommand(tx), 'cURL command copied.'))
+        h(
+          'div',
+          // A click on Copy must not also open or close the panel.
+          { class: 'panel__actions', onClick: (e) => e.preventDefault() },
+          copyButton(() => curlCommand(tx), 'cURL command copied.')
+        )
       ),
       h('pre', { class: 'code code--curl', text: curlCommand(tx) })
-    );
+    ), 'curl');
 
     return h(
       'div',
@@ -362,10 +528,9 @@ export function createNetworkPanel(ctx) {
             fold: true,
             open: foldOpen('resBody', true),
           }), 'resBody'),
-          h('div', { class: 'group-title', text: 'Mock' }),
-          mock
+          curl
         ),
-        h('aside', { class: 'split__side' }, curl)
+        h('aside', { class: 'split__side', 'aria-label': 'Mock' }, mock)
       )
     );
   }
@@ -449,12 +614,11 @@ export function createNetworkPanel(ctx) {
     }
 
     const panel = h(
-      'details',
-      { class: 'panel panel--fold', id: 'sec-mock', open: foldOpen('mock', false) },
+      'section',
+      { class: 'panel panel--mock', id: 'sec-mock' },
       h(
-        'summary',
+        'div',
         { class: 'panel__head' },
-        icon('chevron', 14),
         h('span', { class: 'panel__title', text: 'Mock response' }),
         tx.mockEnabled ? h('span', { class: 'chip chip--mock', text: 'On' }) : h('span', { class: 'panel__meta', text: 'Off' })
       ),
@@ -502,12 +666,12 @@ export function createNetworkPanel(ctx) {
       )
     );
     checkJson();
-    return remember(panel, 'mock');
+    return panel;
   }
 
   function markSelection() {
-    for (const el of listBody.children) {
-      if (el.id) el.setAttribute('aria-selected', String(el.id === `net-row-${selectedId}`));
+    for (const el of listBody.querySelectorAll('.row[id]')) {
+      el.setAttribute('aria-selected', String(el.id === `net-row-${selectedId}`));
     }
   }
 
@@ -544,6 +708,12 @@ export function createNetworkPanel(ctx) {
       sse.on('deleted_transaction', (payload) => {
         rows = rows.filter((r) => r.id !== payload.id);
         total = Math.max(0, total - 1);
+        picked.delete(payload.id);
+        if (allMode && payload.id <= allMode.upToId) {
+          allMode.count = Math.max(0, allMode.count - 1);
+          allMode.except.delete(payload.id);
+          if (pickedCount() === 0) allMode = null;
+        }
         renderList();
       })
     );
@@ -551,6 +721,8 @@ export function createNetworkPanel(ctx) {
       sse.on('all_deleted', () => {
         rows = [];
         total = 0;
+        picked = new Set();
+        allMode = null;
         renderList();
       })
     );
@@ -598,6 +770,8 @@ export function createNetworkPanel(ctx) {
         subscribe();
         reload();
       } else if (filtersChanged) {
+        // "Select all" meant the calls under the old filters. Calls picked one by one stay.
+        allMode = null;
         paintFilters();
         reload();
       }

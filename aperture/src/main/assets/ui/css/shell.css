@@ -431,10 +431,10 @@ body[data-rail="open"] .rail__label {
     text-decoration: none;
 }
 
-/* The request in one column, with cURL in a side column that stays on screen. */
+/* The request in one column, with the mock in a side column that stays on screen. */
 .split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 32%);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 40%);
     gap: var(--sp-5);
     align-items: start;
 }
@@ -442,20 +442,26 @@ body[data-rail="open"] .rail__label {
 .split__side {
     position: sticky;
     top: calc(var(--head-h, 150px) + var(--sp-3));
+    /* A long mock body scrolls inside the column, so Save stays in reach. */
+    max-height: calc(100vh - var(--head-h, 150px) - var(--sp-6));
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
-.split__side .code {
-    max-height: calc(100vh - var(--head-h, 150px) - 140px);
+#sec-curl {
+    margin-top: var(--sp-5);
 }
 
-/* A narrow pane has no room for two columns, so cURL drops below the rest. */
-@container (max-width: 960px) {
+/* A narrow pane has no room for two columns, so the mock drops below the rest. */
+@container (max-width: 720px) {
     .split {
         grid-template-columns: minmax(0, 1fr);
     }
 
     .split__side {
         position: static;
+        max-height: none;
+        overflow: visible;
     }
 }
 

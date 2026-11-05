@@ -6,6 +6,7 @@ import io.aperture.data.repository.TransactionRepository
 import io.aperture.inspect.InspectorModule
 import io.aperture.server.ApertureBus
 import io.aperture.server.BusEvent
+import io.aperture.server.dto.ExportRequest
 import io.aperture.server.dto.TransactionDto
 import io.aperture.server.dto.TransactionListResponse
 import io.aperture.server.dto.TransactionSummaryDto
@@ -15,14 +16,22 @@ import io.aperture.server.dto.UpdateMockStatusRequest
 import io.aperture.server.dto.toDto
 import io.aperture.inspect.badRequest
 import io.aperture.inspect.notFound
+import io.aperture.inspect.network.export.CallSheet
+import io.aperture.inspect.network.export.XlsxWriter
 import io.aperture.util.HeadersSerializer
+import io.ktor.http.ContentDisposition
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondOutputStream
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import kotlinx.coroutines.CancellationException
@@ -33,6 +42,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * HTTP traffic captured by the OkHttp interceptor.
@@ -124,6 +136,50 @@ internal class NetworkInspector(
                         offset = offset
                     )
                 )
+            }
+
+            // POST /transactions/export - the picked calls as an Excel sheet, in call order.
+            // A read, not a write: it changes nothing, so it does not need allowWrites.
+            post("/export") {
+                val request = try {
+                    call.receive<ExportRequest>()
+                } catch (e: Exception) {
+                    call.badRequest("The export request is not valid JSON.")
+                    return@post
+                }
+                val ids = repository.exportIds(
+                    ids = request.ids,
+                    all = request.all,
+                    search = request.search?.takeIf { it.isNotBlank() },
+                    method = request.method?.takeIf { it.isNotBlank() },
+                    upToId = request.upToId,
+                    except = request.except
+                )
+                if (ids.isEmpty()) {
+                    call.badRequest("No captured calls match the selection.")
+                    return@post
+                }
+
+                val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+                call.response.header(
+                    HttpHeaders.ContentDisposition,
+                    ContentDisposition.Attachment
+                        .withParameter(ContentDisposition.Parameters.FileName, "aperture-calls-$stamp.xlsx")
+                        .toString()
+                )
+                call.respondOutputStream(XLSX) {
+                    // One call at a time: a thousand calls with large bodies must not all sit
+                    // in the host app's memory at once.
+                    XlsxWriter(this, CallSheet.SHEET_NAME, CallSheet.columns()).use { sheet ->
+                        var index = 0
+                        for (id in ids) {
+                            // A call deleted since the list was read is left out.
+                            val tx = repository.getById(id) ?: continue
+                            index += 1
+                            sheet.row(CallSheet.row(index, tx))
+                        }
+                    }
+                }
             }
 
             // GET /transactions/{id} - one whole record, bodies included
@@ -253,6 +309,8 @@ internal class NetworkInspector(
 
     companion object {
         const val CHANNEL = "network"
+
+        private val XLSX = ContentType("application", "vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         fun newTransaction(dto: TransactionSummaryDto) = BusEvent(
             channel = CHANNEL,

@@ -8,8 +8,14 @@ import io.aperture.data.repository.TransactionRepository
 import io.aperture.inspect.network.NetworkInspector
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.readBytes
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -25,6 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.util.zip.ZipInputStream
 
 /**
  * Nothing used to test the server itself: not a route, not a status code, not the token check.
@@ -252,5 +259,63 @@ class ApertureRoutesTest {
         assertFalse(ApertureServer.isConsoleView("/api"))
         assertFalse(ApertureServer.isConsoleView("/api/capabilities"))
         assertFalse(ApertureServer.isConsoleView("/ui/js/app.js"))
+    }
+
+    // ---------- Excel export ----------
+
+    private suspend fun ApplicationTestBuilder.export(json: String): HttpResponse =
+        client.post("/api/network/transactions/export") {
+            header(HttpHeaders.Host, "127.0.0.1")
+            contentType(ContentType.Application.Json)
+            setBody(json)
+        }
+
+    /** The URLs in the sheet, top to bottom. */
+    private suspend fun exportedUrls(response: HttpResponse): List<String> {
+        val zip = ZipInputStream(response.readBytes().inputStream())
+        var sheet: String? = null
+        while (true) {
+            val entry = zip.nextEntry ?: break
+            if (entry.name == "xl/worksheets/sheet1.xml") sheet = zip.readBytes().decodeToString()
+        }
+        return Regex("http://example\\.com[^<'\\s]*").findAll(sheet!!).map { it.value }.toList()
+    }
+
+    @Test
+    fun `an export of picked calls comes back in call order`() = testApplication {
+        install(ApertureConfig(port = 8080))
+
+        // Picked newest first, as a list shows them. The sheet runs oldest first.
+        val response = export("""{"ids":[3,1]}""")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.headers[HttpHeaders.ContentDisposition]!!.contains(".xlsx"))
+        // Each URL shows twice: in the URL column and in the cURL command.
+        assertEquals(
+            listOf("http://example.com/users/1", "http://example.com/posts/9"),
+            exportedUrls(response).distinct()
+        )
+    }
+
+    @Test
+    fun `select all keeps to the filters, the newest id and the unticked calls`() = testApplication {
+        install(ApertureConfig(port = 8080))
+
+        val gets = export("""{"all":true,"method":"GET"}""")
+        assertEquals(
+            listOf("http://example.com/users/1", "http://example.com/posts/9"),
+            exportedUrls(gets).distinct()
+        )
+
+        val upTo = export("""{"all":true,"upToId":2,"except":[1]}""")
+        assertEquals(listOf("http://example.com/users"), exportedUrls(upTo).distinct())
+    }
+
+    @Test
+    fun `an empty selection is refused`() = testApplication {
+        install(ApertureConfig(port = 8080))
+
+        assertEquals(HttpStatusCode.BadRequest, export("""{"ids":[]}""").status)
+        assertEquals(HttpStatusCode.BadRequest, export("""{"all":true,"search":"nothing-like-this"}""").status)
     }
 }

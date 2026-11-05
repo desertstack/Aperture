@@ -393,7 +393,7 @@
 }
 
 .hdr-table__name {
-    width: 26%;
+    width: 34%;
     min-width: 120px;
     color: var(--ink-1);
     font-weight: 500;
@@ -1306,4 +1306,66 @@ kbd {
     .req-head__actions .btn {
         padding-left: 0;
     }
+}
+
+/* ---------- Export picks in the network list ---------- */
+
+.net-item {
+    position: relative;
+}
+
+/* The tick sits over the row's left edge, beside the button, so the whole row stays one target. */
+.net-item__pick {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.net-item .row--net {
+    padding-left: calc(var(--row-pad) + 22px);
+}
+
+.pick {
+    width: 13px;
+    height: 13px;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.list-pane__select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    min-height: 26px;
+    font-size: var(--fs-xs);
+    color: var(--ink-1);
+}
+
+.list-pane__select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    /* Line the tick up with the ticks on the rows below. */
+    margin-left: -4px;
+    cursor: pointer;
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.list-pane__select-actions {
+    display: flex;
+    gap: var(--sp-1);
+}
+
+.list-pane__select-hint {
+    color: var(--ink-2);
 }

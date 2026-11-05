@@ -194,6 +194,21 @@ interface HttpTransactionDao {
     suspend fun getById(id: Long): HttpTransaction?
 
     /**
+     * The ids under the list filters, oldest first: the order the calls happened in.
+     *
+     * Ids only, so a selection of a thousand calls costs a few kilobytes. The export then reads
+     * the calls one at a time. A null argument means "do not filter on this".
+     */
+    @Query("""
+        SELECT id FROM http_transactions
+        WHERE (:search IS NULL OR url LIKE '%' || :search || '%')
+          AND (:method IS NULL OR method = :method)
+          AND (:upToId IS NULL OR id <= :upToId)
+        ORDER BY request_date ASC, id ASC
+    """)
+    suspend fun idsInCallOrder(search: String?, method: String?, upToId: Long?): List<Long>
+
+    /**
      * Search transactions by URL pattern (FR-DB-008)
      */
     @Query("SELECT * FROM http_transactions WHERE url LIKE '%' || :searchQuery || '%' ORDER BY request_date DESC LIMIT :limit OFFSET :offset")

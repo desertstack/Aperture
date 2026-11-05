@@ -15,6 +15,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        // The console shows this version. It comes from the one the library is published as,
+        // so a release cannot ship with an old number typed by hand.
+        buildConfigField("String", "APERTURE_VERSION", "\"${property("VERSION_NAME")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

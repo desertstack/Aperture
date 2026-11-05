@@ -8,6 +8,22 @@ import kotlinx.serialization.Serializable
  * DTOs for API responses
  */
 
+/**
+ * Which calls go into an Excel export.
+ *
+ * Either [ids], picked one by one, or [all]: every call under [search] and [method] that
+ * existed when the viewer chose "Select all" ([upToId]), less the ones unticked after ([except]).
+ */
+@Serializable
+data class ExportRequest(
+    val ids: List<Long> = emptyList(),
+    val all: Boolean = false,
+    val search: String? = null,
+    val method: String? = null,
+    val upToId: Long? = null,
+    val except: List<Long> = emptyList()
+)
+
 @Serializable
 data class TransactionListResponse(
     val transactions: List<TransactionSummaryDto>,

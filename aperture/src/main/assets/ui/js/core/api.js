@@ -53,7 +53,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(method, path, body) {
+async function request(method, path, body, as = 'json') {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -75,6 +75,7 @@ async function request(method, path, body) {
   }
 
   if (response.status === 204) return null;
+  if (as === 'blob' && response.ok) return response.blob();
 
   const text = await response.text();
   let payload = null;
@@ -102,6 +103,8 @@ export const api = {
   post: (path, body) => request('POST', path, body ?? {}),
   put: (path, body) => request('PUT', path, body ?? {}),
   del: (path, body) => request('DELETE', path, body),
+  /** POST, and take the answer as a file (a Blob), not JSON. */
+  postForFile: (path, body) => request('POST', path, body ?? {}, 'blob'),
 };
 
 /** Build a query string, leaving out anything empty. */
